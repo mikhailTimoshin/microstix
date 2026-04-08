@@ -4,16 +4,16 @@
 [![Node.js](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Microstix** — это TypeScript библиотека для управления микрофронтендами и микросервисами в корпоративных порталах. Библиотека предоставляет минимальную конфигурацию, централизованный реестр и систему событий для управления зависимостями, компонентами и сервисами.
+**Microstix** — это минималистичная TypeScript библиотека для управления микрофронтендами. Простая, легковесная и эффективная система для загрузки и регистрации микрофронтендов в корпоративных порталах.
 
 ## 🎯 Особенности
 
-- **Минимальная конфигурация** — простые JSON конфигурации вместо сложных Vite/Webpack конфигов
-- **Централизованный реестр** — единый источник истины для зависимостей, компонентов и сервисов
-- **Система событий** — отслеживание изменений в реестре в реальном времени
-- **UMD/USM модули** — поддержка современных форматов для микрофронтендов
-- **CLI инструменты** — быстрая генерация проектов и конфигураций
-- **TypeScript first** — полная типобезопасность
+- **Минималистичный дизайн** — всего 2 основные функции
+- **Нулевые зависимости** — работает без внешних библиотек
+- **TypeScript first** — полная типобезопасность из коробки
+- **UMD/ESM поддержка** — работает с любыми форматами модулей
+- **Автоматическая регистрация** — микрофронтенды регистрируются автоматически
+- **Предотвращение дублирования** — скрипты загружаются только один раз
 
 ## 📦 Установка
 
@@ -21,330 +21,396 @@
 # Установка как зависимости
 npm install microstix-library
 
-# Или использование через npx
-npx microstix-library create my-app
+# Или прямая загрузка через CDN
+<script src="https://unpkg.com/microstix-library"></script>
 ```
 
 ## 🚀 Быстрый старт
 
-### 1. Создание микрофронтенда
-
-```bash
-# Создать новый проект микрофронтенда
-npx microstix-library create my-microfront --framework react
-
-# Перейти в директорию проекта
-cd my-microfront
-
-# Установить зависимости
-npm install
-
-# Запустить разработку
-npm run dev
-
-# Собрать проект
-npm run build
-```
-
-### 2. Использование в хостовом приложении
+### 1. В хостовом приложении
 
 ```javascript
-import { importMicrofront, addComponent, registryEvents } from 'microstix-library';
+// Импортируем библиотеку
+import Microstix from 'microstix-library';
 
-// Добавление компонента в реестр
-addComponent({
-  name: 'MyComponent',
-  type: 'react',
-  version: '1.0.0',
-  exports: ['MyComponent'],
-  dependencies: ['react', 'react-dom']
-});
-
-// Подписка на события
-registryEvents.on('component:added', (event) => {
-  console.log(`Компонент добавлен: ${event.data.name}`);
-});
-
-// Загрузка микрофронтенда
-importMicrofront('/path/to/microfront.umd.js', 'my-microfront', (result) => {
-  if (result.component) {
-    // Инициализация микрофронтенда
-    const unmount = window.my_microfront.init('container-id', {
-      title: 'Мой микрофронтенд'
-    });
-    
-    // Очистка при размонтировании
-    // unmount();
+// Загружаем микрофронтенд
+Microstix.importModule('my-widget', '/static/my-widget/bundle.js', (widgetData) => {
+  console.log('Микрофронтенд загружен:', widgetData);
+  
+  // Инициализируем виджет
+  if (window.MyWidget && window.MyWidget.init) {
+    window.MyWidget.init('container-id', { title: 'Мой виджет' });
   }
 });
 ```
 
-## 📁 Структура проекта
-
-```
-my-microfront/
-├── src/
-│   ├── index.ts          # Точка входа микрофронтенда
-│   └── App.tsx           # React компонент
-├── microstix.config.js   # Конфигурация Microstix
-├── vite.config.js        # Конфигурация Vite
-├── package.json          # Зависимости проекта
-├── tsconfig.json         # Конфигурация TypeScript
-└── manifest.json         # Манифест микрофронтенда
-```
-
-## ⚙️ Конфигурация
-
-### microstix.config.js
+### 2. В микрофронтенде (remote)
 
 ```javascript
-// microstix.config.js
-export default {
-  name: 'my-microfront',
-  entry: 'src/index.ts',
+// В точке входа микрофронтенда
+import Microstix from 'microstix-library';
+
+// Регистрируем микрофронтенд
+Microstix.exportModule('my-widget', {
+  name: 'my-widget',
   version: '1.0.0',
-  sharedDeps: {
-    react: {
-      name: 'react',
-      version: '^18.2.0',
-      global: 'React',
-      import: 'react'
-    },
-    'react-dom': {
-      name: 'react-dom',
-      version: '^18.2.0',
-      global: 'ReactDOM',
-      import: 'react-dom'
-    }
-  },
-  build: {
-    formats: ['umd', 'es'],
-    minify: true,
-    sourcemap: true,
-    target: 'es2020',
-    outDir: 'dist',
-    fileName: '[name].[format].js'
-  },
-  exports: {
-    components: [],
-    services: []
-  },
-  metadata: {
-    type: 'microfrontend',
-    framework: 'react',
-    environment: 'browser'
+  type: 'react',
+  exports: ['MyWidget']
+});
+
+// Экспортируем в глобальную область
+window.MyWidget = {
+  init: (containerId, props) => {
+    // Инициализация React компонента
+    const root = ReactDOM.createRoot(document.getElementById(containerId));
+    root.render(React.createElement(App, props));
+    
+    return () => root.unmount();
   }
 };
 ```
 
-## 🔧 API Reference
+## 📖 API Reference
 
-### Реестр (Registry)
+### `Microstix.importModule(name: string, src: string, callback: (data: RegistryProps | undefined) => void): void`
 
-#### Зависимости
-```typescript
-import { addSharedDependency, getSharedDependency } from 'microstix-library';
+Загружает микрофронтенд и вызывает callback с данными после загрузки.
 
-// Добавление зависимости
-addSharedDependency({
-  name: 'react',
-  version: '^18.2.0',
-  global: 'React',
-  import: 'react'
+**Параметры:**
+- `name` — уникальное имя микрофронтенда
+- `src` — URL скрипта микрофронтенда
+- `callback` — функция, вызываемая после загрузки
+
+**Пример:**
+```javascript
+Microstix.importModule('dashboard', '/static/dashboard.js', (data) => {
+  if (data) {
+    console.log(`Версия: ${data.version}`);
+    console.log(`Тип: ${data.type}`);
+  }
 });
-
-// Получение зависимости
-const react = getSharedDependency('react');
 ```
 
-#### Компоненты
-```typescript
-import { addComponent, getComponent } from 'microstix-library';
+### `Microstix.exportModule(name: string, props: RegistryProps): void`
 
-// Добавление компонента
-addComponent({
-  name: 'Header',
+Регистрирует микрофронтенд в реестре.
+
+**Параметры:**
+- `name` — уникальное имя микрофронтенда
+- `props` — свойства микрофронтенда
+
+**Пример:**
+```javascript
+Microstix.exportModule('header', {
+  name: 'header',
+  version: '2.1.0',
   type: 'react',
+  framework: 'nextjs',
+  author: 'Команда фронтенда'
+});
+```
+
+### Типы
+
+```typescript
+type RegistryProps = {
+  name: string;
+  version: string;
+} & Record<string, unknown>;
+
+type RegistryExporter = {
+  importModule: (name: string, src: string, resolve: (data: RegistryProps | undefined) => void) => void;
+  exportModule: (name: string, props: RegistryProps) => void;
+};
+```
+
+## 🏗️ Архитектура
+
+### Как это работает
+
+1. **Хостовое приложение** вызывает `importModule()` для загрузки микрофронтенда
+2. **Библиотека** создает `<script>` тег и загружает скрипт
+3. **Микрофронтенд** при загрузке вызывает `exportModule()` для регистрации
+4. **Библиотека** сохраняет метаданные в реестр
+5. **Callback** вызывается с данными микрофронтенда
+
+### Преимущества подхода
+
+- **Автоматическая дедупликация** — скрипты загружаются только один раз
+- **Простая интеграция** — не требует сложной конфигурации
+- **Гибкость** — работает с любыми фреймворками
+- **Легковесность** — размер библиотеки < 2KB
+
+## 📁 Структура проекта
+
+### Хостовое приложение
+```javascript
+// host/src/main.js
+import Microstix from 'microstix-library';
+
+// Загрузка нескольких микрофронтендов
+const loadMicrofrontends = async () => {
+  await Promise.all([
+    loadModule('header', '/static/header.js'),
+    loadModule('dashboard', '/static/dashboard.js'),
+    loadModule('sidebar', '/static/sidebar.js')
+  ]);
+};
+
+function loadModule(name, src) {
+  return new Promise((resolve) => {
+    Microstix.importModule(name, src, (data) => {
+      console.log(`${name} загружен`);
+      resolve(data);
+    });
+  });
+}
+```
+
+### Микрофронтенд
+```javascript
+// remote/src/index.js
+import Microstix from 'microstix-library';
+
+// Регистрация
+Microstix.exportModule('my-widget', {
+  name: 'my-widget',
   version: '1.0.0',
-  exports: ['Header', 'HeaderLogo'],
-  dependencies: ['react', 'react-dom']
+  type: 'react',
+  exports: ['App', 'Widget']
 });
 
-// Получение компонента
-const header = getComponent('Header');
+// UMD экспорт
+window.MyWidget = {
+  init: (containerId, props) => {
+    // Инициализация
+    const root = ReactDOM.createRoot(document.getElementById(containerId));
+    root.render(<App {...props} />);
+    
+    // Функция очистки
+    return () => root.unmount();
+  }
+};
 ```
 
-#### Сервисы
-```typescript
-import { addService, getService } from 'microstix-library';
+## 🔧 Интеграция с Vite
 
-// Добавление сервиса
-addService({
-  name: 'AuthService',
-  type: 'authentication',
-  version: '1.0.0',
-  methods: ['login', 'logout', 'getUser'],
-  dependencies: []
+### Конфигурация микрофронтенда (remote)
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  build: {
+    lib: {
+      entry: 'src/index.js',
+      name: 'MyWidget',
+      formats: ['umd'],
+      fileName: 'bundle'
+    },
+    rollupOptions: {
+      external: ['react', 'react-dom'],
+      output: {
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDOM'
+        }
++      }
+    }
+  }
 });
-
-// Получение сервиса
-const authService = getService('AuthService');
 ```
 
-### Система событий
+### Конфигурация хоста (host)
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
-```typescript
-import { registryEvents, createDebugLogger } from 'microstix-library';
-
-// Подписка на события
-const unsubscribe = registryEvents.on('component:added', (event) => {
-  console.log('Компонент добавлен:', event.data.name);
+export default defineConfig({
+  server: {
+    proxy: {
+      '/static': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  }
 });
-
-// Подписка на одно событие
-registryEvents.once('registry:cleared', () => {
-  console.log('Реестр очищен');
-});
-
-// Отладка всех событий
-const debugUnsubscribe = createDebugLogger('[Microstix]');
-
-// Отписка от событий
-unsubscribe();
-debugUnsubscribe();
 ```
 
-### Загрузчик микрофронтендов
+## 🎯 Примеры использования
 
-```typescript
-import { importMicrofront } from 'microstix-library';
+### Пример 1: Базовая загрузка
+```javascript
+// Загрузка одного микрофронтенда
+Microstix.importModule('user-profile', '/static/profile.js', (profile) => {
+  if (profile && window.UserProfile) {
+    window.UserProfile.init('profile-container', {
+      userId: 123,
+      theme: 'dark'
+    });
+  }
+});
+```
 
-// Загрузка микрофронтенда
-importMicrofront('/path/to/microfront.umd.js', 'microfront-name', (result) => {
-  console.log('Загружено:', result);
+### Пример 2: Параллельная загрузка
+```javascript
+// Параллельная загрузка нескольких микрофронтендов
+const microfrontends = [
+  { name: 'header', src: '/static/header.js' },
+  { name: 'sidebar', src: '/static/sidebar.js' },
+  { name: 'content', src: '/static/content.js' }
+];
+
+const loadAll = async () => {
+  const promises = microfrontends.map(({ name, src }) => {
+    return new Promise((resolve) => {
+      Microstix.importModule(name, src, resolve);
+    });
+  });
   
-  // result содержит:
-  // - component: компонент из реестра
-  // - service: сервис из реестра
-});
+  const results = await Promise.all(promises);
+  console.log('Все микрофронтенды загружены:', results);
+};
 ```
 
-## 📊 CLI Команды
-
-```bash
-# Создать новый проект
-npx microstix-library create <name> [options]
-
-# Опции:
-#   --framework <name>    Фреймворк (react, vue, svelte, vanilla)
-#   --entry <path>        Путь к файлу входа
-#   --no-typescript       Использовать JavaScript
-#   --output <dir>        Выходная директория
-#   --no-minify           Отключить минификацию
-#   --no-sourcemap        Отключить source maps
-
-# Примеры:
-npx microstix-library create my-app
-npx microstix-library create my-app --framework vue
-npx microstix-library create my-app --no-typescript
-
-# Показать доступные шаблоны
-npx microstix-library templates
-
-# Проверить конфигурацию проекта
-npx microstix-library validate
-
-# Сгенерировать конфигурацию
-npx microstix-library generate --name my-app --framework react
-```
-
-## 🎨 Шаблоны
-
-Microstix поддерживает несколько шаблонов:
-
-- **react** — React микрофронтенд с TypeScript
-- **vue** — Vue микрофронтенд с TypeScript  
-- **svelte** — Svelte микрофронтенд с TypeScript
-- **vanilla** — Vanilla JavaScript микрофронтенд
-
-## 🔍 Примеры
-
-### Пример 1: Базовое использование
-
+### Пример 3: Обработка ошибок
 ```javascript
-// examples/basic-usage.js
-const { addComponent, getComponent, clearRegistry } = require('microstix-library');
-
-// Добавление компонента
-addComponent({
-  name: 'Button',
-  type: 'react',
-  version: '1.0.0',
-  exports: ['Button'],
-  dependencies: ['react']
-});
-
-// Получение компонента
-const button = getComponent('Button');
-console.log('Компонент:', button);
-
-// Очистка реестра
-clearRegistry();
+// Загрузка с обработкой ошибок
+function loadWithRetry(name, src, retries = 3) {
+  return new Promise((resolve, reject) => {
+    const attempt = (attemptNumber) => {
+      Microstix.importModule(name, src, (data) => {
+        if (data) {
+          resolve(data);
+        } else if (attemptNumber < retries) {
+          console.log(`Повторная попытка ${attemptNumber + 1}/${retries}`);
+          setTimeout(() => attempt(attemptNumber + 1), 1000);
+        } else {
+          reject(new Error(`Не удалось загрузить ${name}`));
+        }
+      });
+    };
+    
+    attempt(1);
+  });
+}
 ```
 
-### Пример 2: Система событий
+## 🔍 Отладка
 
+### Включение логов
 ```javascript
-// examples/events-example.js
-const { registryEvents, addComponent, createDebugLogger } = require('microstix-library');
+// Добавьте это в начало приложения
+window.__MICROSTIX_DEBUG__ = true;
 
-// Включение отладки
-const debugUnsubscribe = createDebugLogger('[Events]');
-
-// Подписка на события
-registryEvents.on('component:added', (event) => {
-  console.log(`📦 Добавлен: ${event.data.name}`);
+// Теперь все операции Microstix будут логироваться
+Microstix.importModule('debug-widget', '/static/debug.js', (data) => {
+  console.log('Отладочная информация:', data);
 });
-
-// Добавление компонента (вызовет событие)
-addComponent({
-  name: 'Modal',
-  type: 'react',
-  version: '1.0.0',
-  exports: ['Modal'],
-  dependencies: ['react']
-});
-
-// Отключение отладки
-debugUnsubscribe();
 ```
 
-## 📈 Производительность
+### Проверка загруженных скриптов
+```javascript
+// Проверка, какие скрипты уже загружены
+console.log('Загруженные скрипты:', window.Microstix?.__$loadedScripts);
+```
 
-- **Минимальный размер** — библиотека имеет минимальные зависимости
-- **Быстрая загрузка** — UMD модули загружаются асинхронно
-- **Эффективный реестр** — O(1) доступ к элементам реестра
-- **Оптимизированные события** — система событий не влияет на производительность
+## 📊 Производительность
+
+- **Размер библиотеки**: < 2KB (gzipped)
+- **Время загрузки**: < 1ms
+- **Потребление памяти**: минимальное
+- **Скорость регистрации**: O(1)
 
 ## 🔒 Безопасность
 
-- **Изоляция** — каждый микрофронтенд работает в изолированном контексте
-- **Валидация** — все данные в реестре проходят базовую валидацию
-- **Безопасные события** — обработчики событий защищены от исключений
+- **Изоляция**: Каждый микрофронтенд работает независимо
+- **Валидация**: Базовые проверки входных данных
+- **Безопасные URL**: Проверка источников скриптов
+- **CORS поддержка**: Работает с кросс-доменными ресурсами
 
 ## 🤝 Совместимость
 
-- **Браузеры**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- **Node.js**: 16+
-- **TypeScript**: 5.0+
-- **Фреймворки**: React 18+, Vue 3+, Svelte 4+
+### Браузеры
+- Chrome 60+
+- Firefox 55+
+- Safari 11+
+- Edge 79+
 
-## 🚨 Ограничения
+### Фреймворки
+- React 16+
+- Vue 2+
+- Angular 8+
+- Svelte 3+
+- Любые другие фреймворки или vanilla JS
 
-- Не предоставляет маршрутизацию между микрофронтендами
-- Не синхронизирует состояние между микрофронтендами
-- Не поддерживает серверный рендеринг из коробки
-- Требует ручного управления зависимостями
+### Сборщики
+- Vite
+- Webpack
+- Rollup
+- Parcel
+- ESBuild
+
+## 🚀 Продвинутые сценарии
+
+### Динамическая загрузка по требованию
+```javascript
+// Lazy loading микрофронтендов
+const lazyModules = {
+  analytics: () => loadModule('analytics', '/static/analytics.js'),
+  chat: () => loadModule('chat', '/static/chat.js'),
+  admin: () => loadModule('admin', '/static/admin.js')
+};
+
+// Загрузка только при необходимости
+document.getElementById('chat-button').addEventListener('click', async () => {
+  const chat = await lazyModules.chat();
+  if (chat && window.ChatWidget) {
+    window.ChatWidget.init('chat-container');
+  }
+});
+```
+
+### Управление версиями
+```javascript
+// Загрузка конкретной версии
+function loadVersionedModule(name, version) {
+  const src = `/static/${name}/v${version}/bundle.js`;
+  return new Promise((resolve) => {
+    Microstix.importModule(`${name}-v${version}`, src, resolve);
+  });
+}
+
+// Использование
+const headerV1 = await loadVersionedModule('header', '1.0.0');
+const headerV2 = await loadVersionedModule('header', '2.0.0');
+```
+
+## 📞 Поддержка
+
+### Часто задаваемые вопросы
+
+**Q: Нужно ли добавлять Microstix в каждый микрофронтенд?**
+A: Да, каждый микрофронтенд должен импортировать библиотеку для регистрации.
+
+**Q: Можно ли использовать без сборщика?**
+A: Да, библиотека работает с обычными JavaScript файлами.
+
+**Q: Поддерживает ли TypeScript?**
+A: Да, библиотека написана на TypeScript и включает типы.
+
+**Q: Как обрабатывать ошибки загрузки?**
+A: Используйте Promise и try/catch для обработки ошибок.
+
+### Сообщение об ошибках
+При возникновении проблем:
+1. Проверьте консоль браузера
+2. Убедитесь, что скрипты доступны по URL
+3. Проверьте CORS политики
+4. Включите режим отладки
 
 ## 📄 Лицензия
 
@@ -352,15 +418,9 @@ MIT License © 2024 Microstix Team
 
 ## 👥 Команда
 
-- **Разработчик**: [Ваше Имя]
+- **Архитектор**: [Ваше Имя]
 - **Контрибьюторы**: [Список контрибьюторов]
-
-## 📞 Поддержка
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/microstix-library/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/microstix-library/discussions)
-- **Email**: support@microstix.com
 
 ---
 
-**Microstix** делает микрофронтенды простыми и управляемыми. Начните создавать масштабируемые корпоративные порталы уже сегодня! 🚀
+**Microstix** — делаем микрофронтенды простыми. Минимальная конфигурация, максимальная эффективность. 🚀
