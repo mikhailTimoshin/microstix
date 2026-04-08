@@ -1,40 +1,22 @@
 {
-  "name": "microstix-library",
+  "name": "microstix",
   "version": "0.1.0",
   "description": "TypeScript библиотека для микрофронтендов с минимальной конфигурацией",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": {
-    "microstix": "./bin/microstix.js"
-  },
   "files": [
     "dist",
-    "bin",
-    "examples",
     "README.md",
-    "LICENSE",
-    "CHANGELOG.md",
-    "PUBLISH.md"
+    "LICENSE"
   ],
   "scripts": {
-    "clean": "node -e \"try { require('fs').rmSync('dist', { recursive: true, force: true }); } catch(e) {}\"",
     "build": "npm run clean && tsc",
-    "build:cli": "npm run build && node -e \"const fs = require('fs'); fs.chmodSync('bin/microstix.js', '755'); console.log('CLI готов к использованию')\"",
-    "dev": "tsc --watch",
-    "test": "echo \"Tests would run here\"",
-    "lint": "echo \"Linting would run here\"",
-    "prepublishOnly": "npm run build:cli",
-    "create-example": "node -e \"const { createProject } = require('./dist/cli.js'); createProject({ name: 'example-microfront', framework: 'react' })\""
+    "dev": "tsc --watch"
   },
   "keywords": [
     "microfrontends",
-    "microservices",
     "typescript",
-    "umd",
-    "usm",
-    "configuration",
-    "registry",
-    "корпоративный-портал"
+    "registry"
   ],
   "author": "Your Name <your.email@example.com>",
   "license": "MIT",
@@ -47,7 +29,6 @@
   },
   "homepage": "https://github.com/yourusername/microstix-library#readme",
   "devDependencies": {
-    "@types/node": "^20.11.24",
     "typescript": "^5.3.3"
   },
   "peerDependencies": {},

@@ -1,104 +1,65 @@
-import { importMicrofrontend } from './loader'
-import { getComponent, getService, addComponent, addService, MicroSharedRegistryItem, Microservice, Microcomponent } from './registry'
+import type {RegistryProps, RegistryExporter} from './index.types';
 
-// Configuration exports
-export { createMicrofrontConfig, generateViteConfig, generateWebpackConfig, generatePackageJson, generateTsConfig, generateManifest, createCliConfig, validateConfig, MicrofrontTemplates, DEFAULT_SHARED_DEPS, DEFAULT_BUILD_CONFIG } from './config'
-export type { MicrofrontendConfig, BuildConfig, SharedDependency, ExportDefinition, MicrofrontMetadata, GeneratedConfigs, CliOptions, ValidationResult, TemplateConfig } from './config.types'
+const __$loadedScripts = new Map<string, string>();
+const __$registry = new Map<string, RegistryProps>();
 
-// CLI exports
-export { createProject, generateConfig, validateProject, listTemplates, parseArgs, main as runCli } from './cli'
+function index(src: string, name: string) {
+  return new Promise((resolve, reject) => {
+    if (__$loadedScripts.has(src)) {
+      resolve(true);
+      return;
+    }
+    const existingScriptElement = document.querySelector(
+      `script[src="${src}"]`,
+    );
+    if (existingScriptElement) {
+      existingScriptElement.addEventListener('load', () => {
+        __$loadedScripts.set(src, name);
+        resolve(true);
+      });
+      existingScriptElement.addEventListener('error', reject);
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = name;
+    script.type = 'module';
+    script.async = true;
 
-export function importMicrofront(url: string, name: string, cb: (result: MicroSharedRegistryItem) => void) {
-  const onComplete = () => {
-    const component = getComponent(name)
-    const service = getService(name)
-    cb({ component, service })
+    script.onload = () => {
+      __$loadedScripts.set(src, name);
+      resolve(true);
+    };
+
+    script.onerror = (error) => {
+      reject(new Error(`Failed to load script: ${src}: ${error}`));
+    };
+    script.src = src;
+    document.head.appendChild(script);
+  });
+}
+
+function importModule(name: string, src: string, resolve: (data: RegistryProps | undefined) => void): void {
+  const cb = () => {
+    resolve && typeof resolve === "function" && resolve(__$registry.get(name));
   }
-
-  return importMicrofrontend({
-    url,
-    name,
-    onComplete
-  })
+  index(src, name).finally(cb);
 }
 
-export function exportServices(services: Microservice[]) {
-  services.forEach(s => {
-    addService(s)
-  })
+function exportModule(name: string, props: RegistryProps): void {
+  if (__$registry.get(name)) return
+  __$registry.set(name, {...props, url: __$loadedScripts.get(name)})
 }
 
-// Registry re-exports
-export {
-  // Dependency functions
-  getSharedDependency,
-  replaceSharedDependency,
-  deleteSharedDependency,
-  addSharedDependency,
-
-  // Component functions
-  getComponent,
-  replaceComponent,
-  deleteComponent,
-  addComponent,
-
-  // Service functions
-  getService,
-  replaceService,
-  deleteService,
-  addService,
-
-  // Registry management functions
-  getAllDependencies,
-  getAllComponents,
-  getAllServices,
-  getRegistry,
-  clearRegistry,
-  hasDependency,
-  hasComponent,
-  hasService
-} from './registry'
-
-export type {
-  MicroDependency,
-  MicroSharedRegistry,
-  MicroSharedRegistryItem
-} from './registry.types'
-
-// Events exports
-export {
-  // Event emitter
-  registryEvents,
-  RegistryEventEmitter,
-
-  // Event creation helpers
-  createDependencyAddedEvent,
-  createDependencyUpdatedEvent,
-  createDependencyRemovedEvent,
-  createComponentAddedEvent,
-  createComponentUpdatedEvent,
-  createComponentRemovedEvent,
-  createServiceAddedEvent,
-  createServiceUpdatedEvent,
-  createServiceRemovedEvent,
-  createRegistryClearedEvent,
-
-  // Debug utilities
-  createDebugLogger,
-
-  // Decorator
-  withEvents
-} from './events'
-
-export type {
-  EventType,
-  RegistryEvent,
-  EventHandler,
-  EventSubscription
-} from './events'
-
-export function exportComponents(components: Microcomponent[]) {
-  components.forEach(c => {
-    addComponent(c)
-  })
+function getDefaultExport() {
+  if (!window["Microstix"]) {
+    window["Microstix"] = exporter
+  }
+  return window["Microstix"] ?? exporter;
 }
+
+const exporter: RegistryExporter = {
+  importModule,
+  exportModule,
+}
+
+export default getDefaultExport();
