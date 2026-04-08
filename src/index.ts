@@ -49,7 +49,7 @@ function importModule(
 
 function exportModule(name: string, props: RegistryProps): void {
   if (__$registry.has(name)) return;
-  __$registry.set(name, { ...props, url: __$loadedScripts.get(name)});
+  __$registry.set(name, props);
 }
 
 const exporter: RegistryExporter = {
@@ -57,9 +57,7 @@ const exporter: RegistryExporter = {
   exportModule,
 };
 
-
 if (!window['Microstix']) {
-  console.log(window['Microstix']);
   window['Microstix'] = exporter;
 }
 
