@@ -45,13 +45,13 @@ const __$sharedLibs = new Map<string, any>();
 const __$loadedScripts = new Map<string, string>();
 const __$registry = new Map<string, RegistryProps>();
 
-function registerSharedLib(name: string, lib: unknown, global = false) {
+export function registerSharedLib(name: string, lib: unknown, global = false) {
   if (__$sharedLibs.has(name)) return;
   __$sharedLibs.set(name, lib);
   if (global) window[name] = lib;
 }
 
-function useSharedLib<T = unknown>(name: string): T | undefined {
+export function useSharedLib<T = unknown>(name: string): T | undefined {
   return __$sharedLibs.get(name) as T | undefined;
 }
 
@@ -88,7 +88,7 @@ function index(src: string, name: string) {
   });
 }
 
-function importModule(
+export function importModule(
   name: string,
   src: string,
   resolve: (data: RegistryProps | undefined) => void
@@ -99,13 +99,13 @@ function importModule(
   index(src, name).finally(cb);
 }
 
-function importModuleAsync(name: string, src: string): Promise<RegistryProps | undefined> {
+export function importModuleAsync(name: string, src: string): Promise<RegistryProps | undefined> {
   return new Promise(resolve => {
     importModule(name, src, resolve);
   });
 }
 
-function exportModule(name: string, props: RegistryProps): void {
+export function exportModule(name: string, props: RegistryProps): void {
   if (__$registry.has(name)) return;
   __$registry.set(name, props);
 }
