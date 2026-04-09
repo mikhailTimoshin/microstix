@@ -4,24 +4,26 @@
 [![Node.js](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Microstix** — это минималистичная TypeScript библиотека для управления микрофронтендами. Простая, легковесная и эффективная система для загрузки и регистрации микрофронтендов в корпоративных порталах.
+**Microstix** — минималистичная TypeScript библиотека для управления микрофронтендами. Простая, легковесная и эффективная система для загрузки и регистрации микрофронтендов в веб-приложениях.
 
 ## 🎯 Особенности
 
-- **Минималистичный дизайн** — всего 2 основные функции
+- **Минималистичный API** — всего 4 основные функции
 - **Нулевые зависимости** — работает без внешних библиотек
 - **TypeScript first** — полная типобезопасность из коробки
-- **UMD/ESM поддержка** — работает с любыми форматами модулей
-- **Автоматическая регистрация** — микрофронтенды регистрируются автоматически
-- **Предотвращение дублирования** — скрипты загружаются только один раз
+- **Автоматическая дедупликация** — скрипты загружаются только один раз
+- **Поддержка Web Components** — встроенный компонент для загрузки микрофронтендов
+- **Глобальный реестр** — централизованное управление микрофронтендами
 
 ## 📦 Установка
 
 ```bash
-# Установка как зависимости
 npm install microstix
+```
 
-# Или прямая загрузка через CDN
+Или прямая загрузка через CDN:
+
+```html
 <script src="https://unpkg.com/microstix"></script>
 ```
 
@@ -30,11 +32,10 @@ npm install microstix
 ### 1. В хостовом приложении
 
 ```javascript
-// Импортируем библиотеку
-import Mic from 'microstix';
+import Microstix from 'microstix';
 
-// Загружаем микрофронтенд
-Mic.importModule('my-widget', '/static/my-widget/bundle.js', (widgetData) => {
+// Загрузка микрофронтенда
+Microstix.importModule('my-widget', '/static/my-widget/bundle.js', (widgetData) => {
   console.log('Микрофронтенд загружен:', widgetData);
 });
 ```
@@ -42,23 +43,35 @@ Mic.importModule('my-widget', '/static/my-widget/bundle.js', (widgetData) => {
 ### 2. В микрофронтенде (remote)
 
 ```javascript
-// В точке входа микрофронтенда
-import Mic from 'microstix';
-import App from '@/components/App.tsx'
+import Microstix from 'microstix';
 
-// Регистрируем микрофронтенд
-Mic.exportModule('my-widget', {
+// Регистрация микрофронтенда
+Microstix.exportModule('my-widget', {
   name: 'my-widget',
   version: '1.0.0',
   type: 'react',
-  App
+  mount: (container, context) => {
+    // Логика монтирования приложения
+    console.log('Монтируем приложение в:', container);
+  }
 });
+```
 
+### 3. Использование Web Component
+
+```html
+<app-component 
+  name="my-widget" 
+  src="/static/my-widget/bundle.js"
+  styles="/static/my-widget/styles.css">
+</app-component>
 ```
 
 ## 📖 API Reference
 
-### `Microstix.importModule(name: string, src: string, callback: (data: RegistryProps | undefined) => void): void`
+### Основные функции
+
+#### `Microstix.importModule(name: string, src: string, callback: (data: RegistryProps | undefined) => void): void`
 
 Загружает микрофронтенд и вызывает callback с данными после загрузки.
 
@@ -69,19 +82,24 @@ Mic.exportModule('my-widget', {
 
 **Пример:**
 ```javascript
-import Mic from 'microstix';
+import Microstix from 'microstix';
 
-Mic.importModule('dashboard', '/static/dashboard.js', (data) => {
+Microstix.importModule('dashboard', '/static/dashboard.js', (data) => {
   if (data) {
     console.log(`Версия: ${data.version}`);
     console.log(`Тип: ${data.type}`);
+    
+    // Если микрофронтенд предоставляет функцию mount
+    if (data.mount) {
+      data.mount(document.getElementById('dashboard-container'));
+    }
   }
 });
 ```
 
-### `Microstix.exportModule(name: string, props: RegistryProps): void`
+#### `Microstix.exportModule(name: string, props: RegistryProps): void`
 
-Регистрирует микрофронтенд в реестре.
+Регистрирует микрофронтенд в глобальном реестре.
 
 **Параметры:**
 - `name` — уникальное имя микрофронтенда
@@ -89,29 +107,114 @@ Mic.importModule('dashboard', '/static/dashboard.js', (data) => {
 
 **Пример:**
 ```javascript
-import Mic from 'microstix';
+import Microstix from 'microstix';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
 
-Mic.exportModule('header', {
+Microstix.exportModule('header', {
   name: 'header',
   version: '2.1.0',
   type: 'react',
   framework: 'nextjs',
-  author: 'Команда фронтенда'
+  author: 'Команда фронтенда',
+  mount: (container, context) => {
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(App, context));
+    
+    // Возвращаем функцию очистки
+    return () => root.unmount();
+  }
 });
 ```
 
-### Типы
+#### `Microstix.registerSharedLib(name: string, lib: unknown, global?: boolean): void`
+
+Регистрирует общую библиотеку для использования микрофронтендами.
+
+**Параметры:**
+- `name` — имя библиотеки
+- `lib` — объект библиотеки
+- `global` — если true, библиотека будет доступна через window[name]
+
+**Пример:**
+```javascript
+import Microstix from 'microstix';
+import React from 'react';
+
+// Регистрация React как общей библиотеки
+Microstix.registerSharedLib('react', React, true);
+```
+
+#### `Microstix.useSharedLib(name: string): unknown`
+
+Получает зарегистрированную общую библиотеку.
+
+**Параметры:**
+- `name` — имя библиотеки
+
+**Пример:**
+```javascript
+import Microstix from 'microstix';
+
+const React = Microstix.useSharedLib('react');
+if (React) {
+  // Используем React из общей библиотеки
+}
+```
+
+### TypeScript типы
+
+Библиотека включает полную типизацию TypeScript:
 
 ```typescript
-type RegistryProps = {
+// Базовые свойства микрофронтенда
+export type RegistryBaseProps = {
   name: string;
   version: string;
-} & Record<string, unknown>;
-
-type RegistryExporter = {
-  importModule: (name: string, src: string, resolve: (data: RegistryProps | undefined) => void) => void;
-  exportModule: (name: string, props: RegistryProps) => void;
+  mount?: (target: HTMLElement, context?: Record<string, unknown>) => void;
 };
+
+// Полные свойства микрофронтенда
+export type RegistryProps = RegistryBaseProps & Record<string, unknown>;
+
+// API библиотеки
+export type RegistryExporter = {
+  importModule: (
+    name: string,
+    src: string,
+    resolve: (data: RegistryProps | undefined) => void
+  ) => void;
+  exportModule: (name: string, props: RegistryProps) => void;
+  registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
+  useSharedLib: (name: string) => unknown;
+};
+
+// Глобальное объявление для использования в браузере
+declare global {
+  interface Window {
+    Microstix?: RegistryExporter;
+    [name: string]: unknown;
+  }
+}
+```
+
+### Web Component: `<app-component>`
+
+Библиотека предоставляет кастомный элемент `<app-component>` для декларативной загрузки микрофронтендов.
+
+**Атрибуты:**
+- `name` — имя микрофронтенда (обязательный)
+- `src` — URL скрипта микрофронтенда (обязательный)
+- `styles` — URL CSS стилей (опциональный)
+
+**Пример:**
+```html
+<app-component 
+  name="user-profile"
+  src="/static/profile.js"
+  styles="/static/profile.css">
+</app-component>
 ```
 
 ## 🏗️ Архитектура
@@ -129,14 +232,14 @@ type RegistryExporter = {
 - **Автоматическая дедупликация** — скрипты загружаются только один раз
 - **Простая интеграция** — не требует сложной конфигурации
 - **Гибкость** — работает с любыми фреймворками
-- **Легковесность** — размер библиотеки < 2KB
+- **Легковесность** — размер библиотеки ~3KB (несжатый)
 
 ## 📁 Структура проекта
 
 ### Хостовое приложение
 ```javascript
 // host/src/main.js
-import Mic from 'microstix';
+import Microstix from 'microstix';
 
 // Загрузка нескольких микрофронтендов
 const loadMicrofrontends = async () => {
@@ -149,13 +252,57 @@ const loadMicrofrontends = async () => {
 
 function loadModule(name, src) {
   return new Promise((resolve) => {
-    Mic.importModule(name, src, (data) => {
+    Microstix.importModule(name, src, (data) => {
       console.log(`${name} загружен`);
       resolve(data);
     });
   });
 }
 ```
+
+### Микрофронтенд (remote)
+```javascript
+// remote/src/index.js
+import Microstix from 'microstix';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+
+// Регистрация в Microstix
+Microstix.exportModule('my-widget', {
+  name: 'my-widget',
+  version: '1.0.0',
+  type: 'react',
+  mount: (container, context = {}) => {
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(App, context));
+    
+    return () => root.unmount();
+  }
+});
+
+// UMD экспорт для прямой загрузки
+if (typeof window !== 'undefined') {
+  window.MyWidget = {
+    init: (containerId, props) => {
+      const container = document.getElementById(containerId);
+      if (!container) {
+        console.error(`Контейнер ${containerId} не найден`);
+        return () => {};
+      }
+      
+      const root = ReactDOM.createRoot(container);
+      root.render(React.createElement(App, props));
+      
+      return () => {
+        root.unmount();
+        container.innerHTML = '';
+      };
+    }
+  };
+}
+```
+
 ## 🔧 Интеграция с Vite
 
 ### Конфигурация микрофронтенда (remote)
@@ -205,71 +352,92 @@ export default defineConfig({
 
 ## 🎯 Примеры использования
 
-### Пример 1: Базовая загрузка
+### Пример 1: Базовая загрузка с обработкой ошибок
 ```javascript
-import Mic from 'microstix';
+import Microstix from 'microstix';
 
-// Загрузка одного микрофронтенда
-Mic.importModule('user-profile', '/static/profile.js', (profile) => {
-  if (profile) {
-    profile.init('profile-container', {
-      userId: 123,
-      theme: 'dark'
-    });
-  }
-});
-```
-
-### Пример 2: Параллельная загрузка
-```javascript
-import Mic from 'microstix';
-
-// Параллельная загрузка нескольких микрофронтендов
-const microfrontends = [
-  { name: 'header', src: '/static/header.js' },
-  { name: 'sidebar', src: '/static/sidebar.js' },
-  { name: 'content', src: '/static/content.js' }
-];
-
-const loadAll = async () => {
-  const promises = microfrontends.map(({ name, src }) => {
-    return new Promise((resolve) => {
-      Mic.importModule(name, src, resolve);
-    });
-  });
-  
-  const results = await Promise.all(promises);
-  console.log('Все микрофронтенды загружены:', results);
-};
-```
-
-### Пример 3: Обработка ошибок
-```javascript
-import Mic from 'microstix';
-
-// Загрузка с обработкой ошибок
-function loadWithRetry(name, src, retries = 3) {
+function loadModule(name, src, maxRetries = 3) {
   return new Promise((resolve, reject) => {
-    const attempt = (attemptNumber) => {
-      Mic.importModule(name, src, (data) => {
+    let attempts = 0;
+    
+    const tryLoad = () => {
+      attempts++;
+      
+      Microstix.importModule(name, src, (data) => {
         if (data) {
           resolve(data);
-        } else if (attemptNumber < retries) {
-          console.log(`Повторная попытка ${attemptNumber + 1}/${retries}`);
-          setTimeout(() => attempt(attemptNumber + 1), 1000);
+        } else if (attempts < maxRetries) {
+          console.log(`Повторная попытка ${attempts + 1}/${maxRetries}`);
+          setTimeout(tryLoad, 1000);
         } else {
           reject(new Error(`Не удалось загрузить ${name}`));
         }
       });
     };
     
-    attempt(1);
+    tryLoad();
   });
 }
+
+// Использование
+loadModule('user-profile', '/static/profile.js')
+  .then(data => console.log('Загружено:', data))
+  .catch(error => console.error('Ошибка:', error));
 ```
+
+### Пример 2: Управление общими библиотеками
+```javascript
+import Microstix from 'microstix';
+import React from 'react';
+import ReactDOM from 'react-dom';
+
+// В хостовом приложении регистрируем общие библиотеки
+Microstix.registerSharedLib('react', React, true);
+Microstix.registerSharedLib('react-dom', ReactDOM, true);
+
+// В микрофронтенде используем общие библиотеки
+const sharedReact = Microstix.useSharedLib('react');
+const sharedReactDOM = Microstix.useSharedLib('react-dom');
+
+if (sharedReact && sharedReactDOM) {
+  // Используем общие библиотеки вместо установки своих копий
+}
+```
+
+### Пример 3: Динамическая загрузка по требованию
+```javascript
+import Microstix from 'microstix';
+
+// Кэш загруженных модулей
+const moduleCache = new Map();
+
+async function loadOnDemand(name, src) {
+  if (moduleCache.has(name)) {
+    return moduleCache.get(name);
+  }
+  
+  return new Promise((resolve) => {
+    Microstix.importModule(name, src, (data) => {
+      if (data) {
+        moduleCache.set(name, data);
+      }
+      resolve(data);
+    });
+  });
+}
+
+// Загрузка только при клике
+document.getElementById('chat-button').addEventListener('click', async () => {
+  const chatModule = await loadOnDemand('chat', '/static/chat.js');
+  if (chatModule && chatModule.mount) {
+    chatModule.mount(document.getElementById('chat-container'));
+  }
+});
+```
+
 ## 📊 Производительность
 
-- **Размер библиотеки**: < 2KB (gzipped)
+- **Размер библиотеки**: ~3KB (несжатый), ~1.5KB (gzipped)
 - **Время загрузки**: < 1ms
 - **Потребление памяти**: минимальное
 - **Скорость регистрации**: O(1)
@@ -290,7 +458,11 @@ function loadWithRetry(name, src, retries = 3) {
 - Edge 79+
 
 ### Фреймворки
-- Любые фреймворки или библиотеки
+- React
+- Vue
+- Angular
+- Svelte
+- Любые другие фреймворки или ванильный JavaScript
 
 ### Сборщики
 - Vite
@@ -299,75 +471,102 @@ function loadWithRetry(name, src, retries = 3) {
 - Parcel
 - ESBuild
 
-## 🚀 Продвинутые сценарии
-
-### Динамическая загрузка по требованию
-```javascript
-import Mic from 'microstix';
-
-// Функция для загрузки одного модуля
-function loadModule(name, src) {
-  return new Promise((resolve) => {
-    Mic.importModule(name, src, (data) => {
-      resolve({ name, data });
-    });
-  });
-}
-
-// Lazy loading микрофронтендов
-const lazyModules = {
-  analytics: () => loadModule('analytics', '/static/analytics.js'),
-  chat: () => loadModule('chat', '/static/chat.js'),
-  admin: () => loadModule('admin', '/static/admin.js')
-};
-
-// Загрузка только при необходимости
-document.getElementById('chat-button').addEventListener('click', async () => {
-  const chat = await lazyModules.chat();
-  if (chat) chat.init('chat-container');
-});
-```
-
-### Управление версиями
-```javascript
-import Mic from 'microstix';
-
-// Загрузка конкретной версии
-function loadVersionedModule(name, version) {
-  const src = `/static/${name}/v${version}/bundle.js`;
-  return new Promise((resolve) => {
-    Mic.importModule(`${name}-v${version}`, src, resolve);
-  });
-}
-
-// Использование
-const headerV1 = await loadVersionedModule('header', '1.0.0');
-const headerV2 = await loadVersionedModule('header', '2.0.0');
-```
-
 ## 📞 Поддержка
 
 ### Часто задаваемые вопросы
 
 **Q: Нужно ли добавлять Microstix в каждый микрофронтенд?**
-A: Да, каждый микрофронтенд должен импортировать библиотеку для регистрации.
+A: Да, каждый микрофронтенд должен импортировать библиотеку для регистрации через `exportModule()`.
 
 **Q: Можно ли использовать без сборщика?**
-A: Да, библиотека работает с обычными JavaScript файлами и не требует отдельной настройки.
+A: Да, библиотека работает с обычными JavaScript файлами через CDN.
 
 **Q: Поддерживает ли TypeScript?**
-A: Да, библиотека написана на TypeScript и включает типы.
+A: Да, библиотека написана на TypeScript и включает типы из коробки.
+
+**Q: Как обрабатывать ошибки загрузки?**
+A: Используйте Promise-обертки и retry логику как показано в примерах.
 
 ### Сообщение об ошибках
 При возникновении проблем:
-1. Проверьте консоль браузера
-2. Убедитесь, что скрипты доступны по URL
-3. Проверьте CORS политики
-4. Включите режим отладки
+1. Проверьте консоль браузера на наличие ошибок
+2. Убедитесь, что скрипты доступны по указанным URL
+3. Проверьте CORS политики для кросс-доменных ресурсов
+4. Убедитесь, что микрофронтенд вызывает `exportModule()` при загрузке
+
+## 🛠️ Разработка и сборка
+
+### Установка зависимостей
+```bash
+npm install
+```
+
+### Сборка библиотеки
+```bash
+npm run build
+```
+
+### Разработка с отслеживанием изменений
+```bash
+npm run dev
+```
+
+### Структура проекта
+```
+microstix/
+├── src/
+│   ├── index.ts          # Основной код библиотеки
+│   └── index.types.ts    # TypeScript типы
+├── dist/                 # Собранные файлы
+├── examples/             # Примеры использования
+├── package.json          # Конфигурация npm
+├── tsconfig.json         # Конфигурация TypeScript
+└── README.md            # Документация
+```
+
+### Тестирование
+Для тестирования библиотеки создайте HTML файл с примером использования:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Microstix Test</title>
+    <script src="./dist/index.js"></script>
+</head>
+<body>
+    <div id="app">
+        <app-component 
+            name="test-widget"
+            src="./examples/simple-example.js">
+        </app-component>
+    </div>
+    
+    <script>
+        // Тестирование API
+        if (window.Microstix) {
+            console.log('Microstix загружен:', window.Microstix);
+            
+            // Тест регистрации модуля
+            window.Microstix.exportModule('test-module', {
+                name: 'test-module',
+                version: '1.0.0',
+                type: 'test'
+            });
+            
+            // Тест загрузки модуля
+            window.Microstix.importModule('test-module', '', (data) => {
+                console.log('Модуль загружен:', data);
+            });
+        }
+    </script>
+</body>
+</html>
+```
 
 ## 📄 Лицензия
 
-MIT License © 2024 Microstix. network.ru.net team!
+MIT License © 2024 Microstix. См. файл [LICENSE](LICENSE) для подробностей.
 
 ## 👥 Команда
 
