@@ -17,16 +17,16 @@
     "microfrontend",
     "typescript"
   ],
-  "author": "Leto <leto@network.ru.net>",
+  "author": "Leto <m.timoshin88@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/network-ru-net/microstix.git"
+    "url": "https://github.com/mikhailTimoshin/microstix.git"
   },
   "bugs": {
-    "url": "https://github.com/network-ru-net/microstix/issues"
+    "url": "https://github.com/mikhailTimoshin/microstix/issues"
   },
-  "homepage": "https://microfrontend.network.ru.net",
+  "homepage": "https://github.com/mikhailTimoshin/microstix/README.md",
   "devDependencies": {
     "typescript": "^5.3.3"
   },
