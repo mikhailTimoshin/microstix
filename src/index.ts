@@ -122,4 +122,4 @@ if (!window['Microstix']) {
   window['Microstix'] = exporter;
 }
 
-export default window['Microstix'] ?? exporter;
+export default window['Microstix'].default ?? window['Microstix'] ?? exporter;

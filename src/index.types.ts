@@ -6,6 +6,7 @@ export type RegistryBaseProps = {
 export type RegistryProps = RegistryBaseProps & Record<string, unknown>;
 
 export type RegistryExporter = {
+  default?: RegistryExporter;
   importModule: (
     name: string,
     src: string,
