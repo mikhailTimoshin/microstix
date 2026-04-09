@@ -37,8 +37,23 @@ export class Component extends HTMLElement {
   }
 }
 
+if (!customElements.get('app-component')) {
+  customElements.define('app-component', Component);
+}
+
+const __$sharedLibs = new Map<string, any>();
 const __$loadedScripts = new Map<string, string>();
 const __$registry = new Map<string, RegistryProps>();
+
+function registerSharedLib(name: string, lib: unknown, global = false) {
+  if (__$sharedLibs.has(name)) return;
+  __$sharedLibs.set(name, lib);
+  if (global) window[name] = lib;
+}
+
+function useSharedLib(name: string) {
+  return __$sharedLibs.get(name);
+}
 
 function index(src: string, name: string) {
   return new Promise((resolve, reject) => {
@@ -89,13 +104,11 @@ function exportModule(name: string, props: RegistryProps): void {
   __$registry.set(name, props);
 }
 
-if (!customElements.get('app-component')) {
-  customElements.define('app-component', Component);
-}
-
 const exporter: RegistryExporter = {
   importModule,
   exportModule,
+  registerSharedLib,
+  useSharedLib,
 };
 
 if (!window['Microstix']) {
