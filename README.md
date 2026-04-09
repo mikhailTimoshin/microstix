@@ -566,7 +566,7 @@ microstix/
 
 ## 📄 Лицензия
 
-MIT License © 2024 Microstix. См. файл [LICENSE](LICENSE) для подробностей.
+MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подробностей.
 
 ## 👥 Команда
 

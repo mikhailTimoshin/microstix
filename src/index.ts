@@ -51,8 +51,8 @@ function registerSharedLib(name: string, lib: unknown, global = false) {
   if (global) window[name] = lib;
 }
 
-function useSharedLib(name: string) {
-  return __$sharedLibs.get(name);
+function useSharedLib<T = unknown>(name: string): T | undefined {
+  return __$sharedLibs.get(name) as T | undefined;
 }
 
 function index(src: string, name: string) {
@@ -99,6 +99,12 @@ function importModule(
   index(src, name).finally(cb);
 }
 
+function importModuleAsync(name: string, src: string): Promise<RegistryProps | undefined> {
+  return new Promise(resolve => {
+    importModule(name, src, resolve);
+  });
+}
+
 function exportModule(name: string, props: RegistryProps): void {
   if (__$registry.has(name)) return;
   __$registry.set(name, props);
@@ -106,6 +112,7 @@ function exportModule(name: string, props: RegistryProps): void {
 
 const exporter: RegistryExporter = {
   importModule,
+  importModuleAsync,
   exportModule,
   registerSharedLib,
   useSharedLib,

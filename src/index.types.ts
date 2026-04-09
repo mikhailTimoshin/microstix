@@ -11,9 +11,10 @@ export type RegistryExporter = {
     src: string,
     resolve: (data: RegistryProps | undefined) => void
   ) => void;
+  importModuleAsync: (name: string, src: string) => Promise<RegistryProps | undefined>
   exportModule: (name: string, props: RegistryProps) => void;
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
-  useSharedLib: (name: string) => unknown;
+  useSharedLib: <T = unknown>(name: string) => T | undefined;
 };
 
 declare global {
