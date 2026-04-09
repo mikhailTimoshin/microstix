@@ -1,5 +1,42 @@
 import type { RegistryProps, RegistryExporter } from './index.types';
 
+export class Component extends HTMLElement {
+  private root: ShadowRoot;
+  private container: HTMLElement;
+
+  constructor() {
+    super();
+    this.root = this.attachShadow({ mode: 'open' });
+    this.container = document.createElement('div');
+    this.root.appendChild(this.container);
+  }
+
+  async loadStyles(styleUrl: string) {
+    const response = await fetch(styleUrl);
+    const css = await response.text();
+
+    const styleSheet = new CSSStyleSheet();
+    await styleSheet.replace(css);
+    this.root.adoptedStyleSheets = [styleSheet];
+  }
+
+  async connectedCallback() {
+    const src = this.getAttribute('src');
+    const name = this.getAttribute('name');
+    const stylesUrl = this.getAttribute('styles');
+    if (stylesUrl) {
+      await this.loadStyles(stylesUrl);
+    }
+    if (src && name) {
+      importModule(name, src, result => {
+        if (result && result.mount && typeof result.mount === 'function') {
+          result.mount(this.container);
+        }
+      });
+    }
+  }
+}
+
 const __$loadedScripts = new Map<string, string>();
 const __$registry = new Map<string, RegistryProps>();
 
@@ -50,6 +87,10 @@ function importModule(
 function exportModule(name: string, props: RegistryProps): void {
   if (__$registry.has(name)) return;
   __$registry.set(name, props);
+}
+
+if (!customElements.get('app-component')) {
+  customElements.define('app-component', Component);
 }
 
 const exporter: RegistryExporter = {
