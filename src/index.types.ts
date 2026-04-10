@@ -1,7 +1,7 @@
 export type RegistryBaseProps = {
   name: string;
   version: string;
-  mount?: (target: HTMLElement, context?: Record<string, unknown>) => void;
+  mount?: (target: HTMLElement, context?: Record<string, unknown>) => (() => void) | undefined;
 };
 export type RegistryProps = RegistryBaseProps & Record<string, unknown>;
 
@@ -16,6 +16,7 @@ export type RegistryExporter = {
   exportModule: (name: string, props: RegistryProps) => void;
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
   useSharedLib: <T = unknown>(name: string) => T | undefined;
+  createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
 };
 
 declare global {

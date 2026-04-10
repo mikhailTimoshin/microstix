@@ -1,6 +1,7 @@
 import type { RegistryProps, RegistryExporter } from './index.types';
 
 export class Component extends HTMLElement {
+  private unMount : (() => void) | undefined;
   private root: ShadowRoot;
   private container: HTMLElement;
 
@@ -30,15 +31,47 @@ export class Component extends HTMLElement {
     if (src && name) {
       importModule(name, src, result => {
         if (result && result.mount && typeof result.mount === 'function') {
-          result.mount(this.container);
+          this.unMount = result.mount(this.container);
         }
       });
+    }
+  }
+  disconnectedCallback() {
+    if(this.unMount && typeof this.unMount === 'function') {
+      this.unMount();
     }
   }
 }
 
 if (!customElements.get('app-component')) {
   customElements.define('app-component', Component);
+}
+
+export function createStore<T extends Record<string, any>>(initial: T) {
+  let state = { ...initial };
+  const subs = new Set<(s: T) => void>();
+  const notify = () => subs.forEach(fn => fn({ ...state }));
+
+  const api = {
+    subscribe: (fn: (state: T) => void) => {
+      subs.add(fn);
+      fn({ ...state });
+      return () => subs.delete(fn);
+    }
+  };
+
+  return new Proxy(api as T & typeof api, {
+    get(_, prop: string | symbol) {
+      if (prop in api) return (api as any)[prop];
+      return state[prop as keyof T];
+    },
+    set(_, prop: string | symbol, value: any) {
+      if (prop in api) return true;
+      state[prop as keyof T] = value;
+      notify();
+      return true;
+    }
+  });
 }
 
 const __$sharedLibs = new Map<string, any>();
@@ -116,6 +149,7 @@ const exporter: RegistryExporter = {
   exportModule,
   registerSharedLib,
   useSharedLib,
+  createStore,
 };
 
 if (!window['Microstix']) {
