@@ -21,7 +21,6 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "version": "git add -A && git commit -m \"chore: v$npm_package_version\"",
     "postversion": "git push --set-upstream origin master && git push --tags",
     "pub:patch": "npm version patch && npm publish --access public",
     "pub:minor": "npm version minor && npm publish --access public",
