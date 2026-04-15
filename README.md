@@ -163,6 +163,68 @@ if (React) {
 }
 ```
 
+#### `Microstix.importModuleAsync(name: string, src: string): Promise<RegistryProps | undefined>`
+
+Асинхронная версия `importModule`, возвращает Promise.
+
+**Параметры:**
+- `name` — уникальное имя микрофронтенда
+- `src` — URL скрипта микрофронтенда
+
+**Возвращает:** Promise с данными микрофронтенда или undefined
+
+**Пример:**
+```javascript
+import Microstix from 'microstix';
+
+async function loadWidget() {
+  try {
+    const widgetData = await Microstix.importModuleAsync(
+      'dashboard',
+      '/static/dashboard.js'
+    );
+    
+    if (widgetData && widgetData.mount) {
+      widgetData.mount(document.getElementById('dashboard-container'));
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки:', error);
+  }
+}
+```
+
+#### `Microstix.createStore<T extends Record<string, any>>(initial: T): T & {subscribe: (fn: (state: T) => void) => () => boolean}`
+
+Создает реактивное хранилище состояния с подпиской на изменения.
+
+**Параметры:**
+- `initial` — начальное состояние хранилища
+
+**Возвращает:** Proxy объект с подпиской на изменения
+
+**Пример:**
+```javascript
+import Microstix from 'microstix';
+
+// Создание хранилища
+const store = Microstix.createStore({
+  count: 0,
+  user: null
+});
+
+// Подписка на изменения
+const unsubscribe = store.subscribe((state) => {
+  console.log('Состояние обновлено:', state);
+});
+
+// Изменение состояния
+store.count = 1;
+store.user = { name: 'John' };
+
+// Отписка
+unsubscribe();
+```
+
 ### TypeScript типы
 
 Библиотека включает полную типизацию TypeScript:
@@ -185,9 +247,11 @@ export type RegistryExporter = {
     src: string,
     resolve: (data: RegistryProps | undefined) => void
   ) => void;
+  importModuleAsync: (name: string, src: string) => Promise<RegistryProps | undefined>;
   exportModule: (name: string, props: RegistryProps) => void;
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
-  useSharedLib: (name: string) => unknown;
+  useSharedLib: <T = unknown>(name: string) => T | undefined;
+  createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
 };
 
 // Глобальное объявление для использования в браузере
@@ -437,10 +501,11 @@ document.getElementById('chat-button').addEventListener('click', async () => {
 
 ## 📊 Производительность
 
-- **Размер библиотеки**: ~3KB (несжатый), ~1.5KB (gzipped)
+- **Размер библиотеки**: ~4KB (несжатый), ~2KB (gzipped)
 - **Время загрузки**: < 1ms
 - **Потребление памяти**: минимальное
 - **Скорость регистрации**: O(1)
+- **Поддержка реактивности**: встроенное хранилище состояния
 
 ## 🔒 Безопасность
 
@@ -521,6 +586,7 @@ microstix/
 ├── examples/             # Примеры использования
 ├── package.json          # Конфигурация npm
 ├── tsconfig.json         # Конфигурация TypeScript
+├── tsup.config.js        # Конфигурация сборки
 └── README.md            # Документация
 ```
 
@@ -571,7 +637,14 @@ MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подр
 ## 👥 Команда
 
 - **Архитектор**: Leto
+- **Версия**: 1.4.0
 
 ---
 
 **Microstix** — делаем микрофронтенды простыми. Минимальная конфигурация, максимальная эффективность. 🚀
+
+**Новые возможности в версии 1.4.0:**
+- Добавлена функция `importModuleAsync` для асинхронной загрузки
+- Добавлена функция `createStore` для управления состоянием
+- Улучшена TypeScript типизация
+- Оптимизирована производительность
