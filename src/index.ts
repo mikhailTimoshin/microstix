@@ -1,7 +1,7 @@
 import type { RegistryProps, RegistryExporter } from './index.types';
 
 export class Component extends HTMLElement {
-  private unmount : (() => void) | undefined;
+  private unmount: (() => void) | undefined;
   private root: ShadowRoot;
   private container: HTMLElement;
 
@@ -37,7 +37,7 @@ export class Component extends HTMLElement {
     }
   }
   disconnectedCallback() {
-    if(this.unmount && typeof this.unmount === 'function') {
+    if (this.unmount && typeof this.unmount === 'function') {
       this.unmount();
     }
   }
@@ -57,7 +57,7 @@ export function createStore<T extends Record<string, any>>(initial: T) {
       subs.add(fn);
       fn({ ...state });
       return () => subs.delete(fn);
-    }
+    },
   };
 
   return new Proxy(api as T & typeof api, {
@@ -70,7 +70,7 @@ export function createStore<T extends Record<string, any>>(initial: T) {
       state[prop as keyof T] = value;
       notify();
       return true;
-    }
+    },
   });
 }
 

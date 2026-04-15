@@ -530,11 +530,162 @@ document.getElementById('chat-button').addEventListener('click', async () => {
 - Любые другие фреймворки или ванильный JavaScript
 
 ### Сборщики
-- Vite
+- Vite (с официальным плагином)
 - Webpack
 - Rollup
 - Parcel
 - ESBuild
+
+## 🔌 Плагин Vite
+
+Microstix предоставляет официальный плагин для Vite, который упрощает конфигурацию сборки микрофронтендов.
+
+### Установка
+
+```bash
+npm install microstix
+# Vite уже должен быть установлен в проекте
+```
+
+### Базовое использование
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { microstixVitePlugin } from 'microstix/vite-plugin';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    microstixVitePlugin({
+      projectName: 'my-widget',
+      entry: 'src/index.jsx',
+      styles: 'src/App.css',
+      libraryName: 'MyWidget',
+      formats: ['umd'],
+      externals: ['react', 'react-dom', 'microstix'],
+      globals: {
+        react: 'React',
+        'react-dom': 'ReactDOM',
+        microstix: 'Microstix',
+      },
+      devPort: 3001,
+      basePath: '/static/my-widget/',
+    }),
+  ],
+});
+```
+
+### Готовые конфигурации
+
+```javascript
+import { createReactConfig, microstixVitePlugin } from 'microstix/vite-plugin';
+import react from '@vitejs/plugin-react';
+
+// Автоматическая конфигурация для React
+const config = createReactConfig('my-widget', {
+  libraryName: 'MyWidget',
+  devPort: 3001,
+});
+
+export default {
+  plugins: [react(), microstixVitePlugin(config)],
+};
+```
+
+Доступные готовые конфигурации:
+- `createReactConfig()` - для React микрофронтендов
+- `createVueConfig()` - для Vue микрофронтендов  
+- `createSvelteConfig()` - для Svelte микрофронтендов
+- `createVanillaConfig()` - для Vanilla JS микрофронтендов
+
+### API плагина
+
+#### `microstixVitePlugin(config)`
+Основная функция плагина. Принимает объект конфигурации.
+
+#### `createMicrostixConfig(config)`
+Создает конфигурацию Vite на основе параметров Microstix.
+
+#### `defineMicrostixConfig(config)`
+Вспомогательная функция для TypeScript с полной типизацией.
+
+#### `generateViteConfig(config)`
+Генерирует полный конфиг Vite (включая все стандартные настройки).
+
+#### `validateConfig(config)`
+Валидирует конфигурацию и возвращает массив ошибок.
+
+### Параметры конфигурации
+
+| Параметр | Тип | По умолчанию | Описание |
+|----------|-----|--------------|----------|
+| `projectName` | `string` | **обязательный** | Имя проекта/микрофронтенда |
+| `entry` | `string` | `'src/index.jsx'` | Путь к точке входа |
+| `styles` | `string` | `'src/App.css'` | Путь к CSS файлу |
+| `libraryName` | `string` | `projectName` | Имя библиотеки для UMD бандла |
+| `formats` | `array` | `['umd']` | Форматы сборки (`'umd'`, `'es'`, `'cjs'`) |
+| `externals` | `array` | `['react', 'react-dom', 'microstix']` | Внешние зависимости |
+| `globals` | `object` | `{react: 'React', 'react-dom': 'ReactDOM', microstix: 'Microstix'}` | Глобальные переменные |
+| `devPort` | `number` | `3001` | Порт для dev сервера |
+| `basePath` | `string` | `/static/${projectName}/` | Базовый путь для статики |
+| `sourcemap` | `boolean` | `true` | Включить sourcemaps |
+| `minify` | `boolean` | `true` | Минимизировать код в production |
+| `viteOptions` | `object` | `{}` | Дополнительные настройки Vite |
+
+### Примеры использования
+
+#### TypeScript проект
+```typescript
+import { defineMicrostixConfig, microstixVitePlugin } from 'microstix/vite-plugin';
+import react from '@vitejs/plugin-react';
+
+const config = defineMicrostixConfig({
+  projectName: 'typescript-widget',
+  entry: 'src/main.tsx',
+  libraryName: 'TypeScriptWidget',
+  formats: ['umd', 'es'],
+  externals: ['react', 'react-dom', 'microstix', 'axios'],
+  globals: {
+    react: 'React',
+    'react-dom': 'ReactDOM',
+    microstix: 'Microstix',
+    axios: 'axios',
+  },
+});
+
+export default {
+  plugins: [react(), microstixVitePlugin(config)],
+};
+```
+
+#### Кастомная конфигурация
+```javascript
+import { createReactConfig, validateConfig } from 'microstix/vite-plugin';
+
+const config = createReactConfig('custom-widget', {
+  formats: ['umd', 'es', 'cjs'],
+  basePath: '/assets/widgets/custom/',
+  sourcemap: 'hidden',
+  minify: process.env.NODE_ENV === 'production',
+});
+
+// Валидация перед использованием
+const errors = validateConfig(config);
+if (errors.length === 0) {
+  console.log('Конфигурация валидна!');
+}
+```
+
+### Преимущества плагина
+
+1. **Автоматическая конфигурация** - минимум ручной настройки
+2. **TypeScript поддержка** - полная типизация из коробки
+3. **Готовые шаблоны** - для популярных фреймворков
+4. **Валидация** - проверка конфигурации перед сборкой
+5. **Гибкость** - возможность кастомизации всех параметров
+6. **Интеграция** - seamless интеграция с экосистемой Vite
 
 ## 📞 Поддержка
 
@@ -643,7 +794,9 @@ MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подр
 
 **Microstix** — делаем микрофронтенды простыми. Минимальная конфигурация, максимальная эффективность. 🚀
 
-**Новые возможности в версии 1.4.0:**
+**Новые возможности в версии 1.4.2:**
+- Добавлен официальный плагин Vite для упрощения конфигурации
+- Добавлены готовые конфигурации для React, Vue, Svelte и Vanilla JS
 - Добавлена функция `importModuleAsync` для асинхронной загрузки
 - Добавлена функция `createStore` для управления состоянием
 - Улучшена TypeScript типизация

@@ -1,6 +1,6 @@
 {
   "name": "microstix",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "TypeScript библиотека для микрофронтендов с минимальной конфигурацией",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./vite-plugin": {
+      "types": "./dist/vite-plugin.d.ts",
+      "import": "./dist/vite-plugin.mjs",
+      "require": "./dist/vite-plugin.cjs"
     }
   },
   "files": [
@@ -28,7 +33,10 @@
   },
   "keywords": [
     "microfrontend",
-    "typescript"
+    "typescript",
+    "vite",
+    "plugin",
+    "build-tool"
   ],
   "author": "Leto <m.timoshin88@gmail.com>",
   "license": "MIT",
@@ -40,9 +48,14 @@
     "url": "https://github.com/mikhailTimoshin/microstix/issues"
   },
   "homepage": "https://github.com/mikhailTimoshin/microstix/README.md",
+  "peerDependencies": {
+    "vite": "^4.0.0 || ^5.0.0"
+  },
   "devDependencies": {
+    "@types/node": "^20.19.39",
     "tsup": "^8.5.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.4.21"
   },
   "engines": {
     "node": ">=16.0.0"
