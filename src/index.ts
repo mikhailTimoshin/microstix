@@ -1,7 +1,7 @@
 import type { RegistryProps, RegistryExporter } from './index.types';
 
 export class Component extends HTMLElement {
-  private unMount : (() => void) | undefined;
+  private unmount : (() => void) | undefined;
   private root: ShadowRoot;
   private container: HTMLElement;
 
@@ -31,14 +31,14 @@ export class Component extends HTMLElement {
     if (src && name) {
       importModule(name, src, result => {
         if (result && result.mount && typeof result.mount === 'function') {
-          this.unMount = result.mount(this.container);
+          this.unmount = result.mount(this.container);
         }
       });
     }
   }
   disconnectedCallback() {
-    if(this.unMount && typeof this.unMount === 'function') {
-      this.unMount();
+    if(this.unmount && typeof this.unmount === 'function') {
+      this.unmount();
     }
   }
 }
