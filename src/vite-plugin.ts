@@ -5,22 +5,12 @@ export interface MicrostixViteConfig {
   /**
    * Имя проекта/микрофронтенда
    */
-  projectName: string;
+  name: string;
 
   /**
    * Путь к точке входа (по умолчанию: 'src/index.jsx')
    */
-  entry?: string;
-
-  /**
-   * Путь к CSS файлу (по умолчанию: 'src/App.css')
-   */
-  styles?: string;
-
-  /**
-   * Имя библиотеки для UMD бандла
-   */
-  libraryName?: string;
+  component?: string;
 
   /**
    * Форматы сборки (по умолчанию: ['umd'])
@@ -28,19 +18,14 @@ export interface MicrostixViteConfig {
   formats?: ('umd' | 'es' | 'cjs')[];
 
   /**
-   * Внешние зависимости для исключения из бандла
-   */
-  externals?: string[];
-
-  /**
    * Глобальные переменные для внешних зависимостей
    */
-  globals?: Record<string, string>;
+  sharedLibs?: Record<string, string>;
 
   /**
    * Порт для dev сервера (по умолчанию: 3001)
    */
-  devPort?: number;
+  port?: number;
 
   /**
    * Базовый путь для статических ресурсов
@@ -63,52 +48,56 @@ export interface MicrostixViteConfig {
   viteOptions?: Record<string, any>;
 }
 
+function createSharedLibs(libs: Record<string, string>) {
+  let result: string[] = [];
+  if (libs) {
+    Object.keys(libs).forEach((key) => {
+      result.push(key)
+    })
+  }
+  return result;
+}
+
 /**
  * Создает конфигурацию Vite для микрофронтенда
  */
-export function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig> {
+function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig> {
   const {
-    projectName,
-    entry = 'src/App.jsx',
-    styles = 'src/App.css',
-    libraryName = projectName,
+    name,
+    component = 'src/index.jsx',
     formats = ['es', 'cjs'],
-    externals = ['react', 'react-dom', 'microstix'],
-    globals = {
-      react: 'React',
-      'react-dom': 'ReactDOM',
-      microstix: 'Microstix',
+    sharedLibs = {
+      'react': "React",
+      "react-dom": "ReactDOM",
+      'microstix': "Microstix",
     },
-    devPort = 3001,
-    basePath = `/static/${projectName}/`,
+    port = 3001,
+    basePath = `/${name}/`,
     sourcemap = true,
     minify = true,
     viteOptions = {},
   } = config;
 
-  const entryPoints: Record<string, string> = {
-    main: entry,
-  };
+  const external = createSharedLibs(config.sharedLibs || {})
 
-  if (styles) {
-    entryPoints.styles = styles;
-  }
+  const entryPoints: Record<string, string> = {
+    index: component,
+  };
 
   return {
     base: basePath,
     build: {
       lib: {
         entry: entryPoints,
-        name: libraryName,
+        name,
         formats,
       },
       cssCodeSplit: true,
-      outDir: `dist/${projectName}`,
+      outDir: `dist/${name}`,
       rollupOptions: {
-        external: externals,
+        external,
         output: {
-          assetFileNames: 'assets/[name][extname]',
-          globals,
+          globals: sharedLibs,
           sourcemap,
         },
       },
@@ -116,7 +105,7 @@ export function createMicrostixConfig(config: MicrostixViteConfig): Partial<User
       emptyOutDir: true,
     },
     server: {
-      port: devPort,
+      port,
       cors: true,
     },
     ...viteOptions,
@@ -141,7 +130,6 @@ export function microstixVitePlugin(config: MicrostixViteConfig): Plugin {
  */
 export const vitePlugin = {
   microstixVitePlugin,
-  createMicrostixConfig,
 };
 
 export default microstixVitePlugin;
