@@ -24,5 +24,18 @@ export default defineConfig([
     outExtension: ({ format }) => ({
       js: format === 'cjs' ? '.cjs' : '.mjs',
     }),
+
+  },
+  {
+    entry: ['src/jsx-runtime.ts'],
+    format: ['esm', 'cjs'],
+    dts: false,
+    sourcemap: true,
+    clean: false,
+    minify: true,
+    outDir: 'dist',
+    outExtension: ({ format }) => ({
+      js: format === 'cjs' ? '.cjs' : '.mjs',
+    }),
   },
 ]);

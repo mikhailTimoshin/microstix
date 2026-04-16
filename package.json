@@ -16,7 +16,12 @@
       "types": "./dist/vite-plugin.d.ts",
       "import": "./dist/vite-plugin.mjs",
       "require": "./dist/vite-plugin.cjs"
+    },
+    "./jsx-runtime": {
+      "import": "./dist/jsx-runtime.mjs",
+      "require": "./dist/jsx-runtime.cjs"
     }
+
   },
   "files": [
     "dist",
