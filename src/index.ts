@@ -1,4 +1,4 @@
-import type { RegistryProps, RegistryExporter } from './index.types';
+import type { RegistryProps, RegistryExporter, RegisterStylesheetProps } from './index.types';
 
 export class Component extends HTMLElement {
   private unmount: (() => void) | undefined;
@@ -148,6 +148,18 @@ export function registerImport(name: string, data: unknown): void {
   registerSharedLib(name, data);
 }
 
+export function registerStylesheet({name, rel, obj}: RegisterStylesheetProps): void {
+  const id = `rel-${name}-${obj}`
+  const target = document.getElementById(id)
+  if (target && !rel) return
+  const el = document.createElement('link')
+  el.id = id
+  el.href = rel
+  el.rel = 'stylesheet'
+  el.crossOrigin = 'crossorigin'
+  document.head.appendChild(el)
+}
+
 const exporter: RegistryExporter = {
   importModule,
   importModuleAsync,
@@ -156,6 +168,7 @@ const exporter: RegistryExporter = {
   useSharedLib,
   createStore,
   registerImport,
+  registerStylesheet,
 };
 
 if (!window['Microstix']) {

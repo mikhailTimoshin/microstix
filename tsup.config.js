@@ -24,8 +24,8 @@ export default defineConfig([
     outExtension: ({ format }) => ({
       js: format === 'cjs' ? '.cjs' : '.mjs',
     }),
-
   },
+  // Отдельная сборка плагина jsx
   {
     entry: ['src/jsx-runtime.ts'],
     format: ['esm', 'cjs'],

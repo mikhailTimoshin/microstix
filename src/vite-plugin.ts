@@ -68,8 +68,7 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
     formats = ['es', 'cjs'],
     sharedLibs = {
       'react': "React",
-      "react-dom": "ReactDOM",
-      'microstix': "Microstix",
+      "react-dom": "ReactDOM"
     },
     port = 3001,
     basePath = `/${name}/`,
@@ -124,12 +123,17 @@ export function microstixVitePlugin(config: MicrostixViteConfig): Plugin {
   return plugin;
 }
 
+export function getReactProd(isProd: boolean) {
+  if (!isProd) {return {}}
+  return { jsxImportSource: 'microstix' }
+}
 
 /**
  * Основной экспорт плагина Vite для Microstix
  */
 export const vitePlugin = {
   microstixVitePlugin,
+  getReactProd,
 };
 
 export default microstixVitePlugin;

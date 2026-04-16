@@ -5,6 +5,12 @@ export type RegistryBaseProps = {
 };
 export type RegistryProps = RegistryBaseProps & Record<string, unknown>;
 
+export type RegisterStylesheetProps = {
+  name: string;
+  rel: string;
+  obj: string
+}
+
 export type RegistryExporter = {
   default?: RegistryExporter;
   importModule: (
@@ -17,6 +23,7 @@ export type RegistryExporter = {
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
   useSharedLib: <T = unknown>(name: string) => T | undefined;
   registerImport: (name: string, data: unknown) => void
+  registerStylesheet: (cfg: RegisterStylesheetProps) => void
   createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
 };
 
