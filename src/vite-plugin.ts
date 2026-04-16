@@ -111,6 +111,7 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
   };
 }
 
+
 /**
  * Плагин Vite для Microstix
  */
@@ -120,6 +121,24 @@ export function microstixVitePlugin(config: MicrostixViteConfig): Plugin {
     config: () => createMicrostixConfig(config),
   };
 
+  return plugin;
+}
+
+export function microstixHtmlPlugin(isProd: boolean): Plugin {
+  const plugin: Plugin = {
+    name: 'microstix-html-plugin',
+    transformIndexHtml(html) {
+      if (!isProd) return html;
+      return html.replace(
+        '<head>',
+        `<head>
+          <script>
+          window.process = {env: {NODE_ENV: 'production'}}
+          </script>
+        `.trim()
+      );
+    },
+  };
   return plugin;
 }
 
@@ -133,6 +152,7 @@ export function getReactProd(isProd: boolean) {
  */
 export const vitePlugin = {
   microstixVitePlugin,
+  microstixHtmlPlugin,
   getReactProd,
 };
 

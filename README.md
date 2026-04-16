@@ -61,7 +61,7 @@ Microstix.exportModule('my-widget', {
 
 ### 3. Использование React компонента в хосте
 
-```typescript
+```tsx
 import { useState, useEffect } from 'react';
 import Microstix from 'microstix';
 
@@ -294,7 +294,6 @@ export type RegistryExporter = {
   exportModule: (name: string, props: RegistryProps) => void;
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
   useSharedLib: <T = unknown>(name: string) => T | undefined;
-  registerImport: (name: string, data: unknown) => void;
   registerStylesheet: (cfg: RegisterStylesheetProps) => void;
   createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
 };
@@ -378,7 +377,7 @@ export default defineConfig({
 ```
 
 **Компонент для загрузки микрофронтендов:**
-```typescript
+```tsx
 import type { PropsWithChildren, FC } from "react";
 import { useState, useEffect } from "react";
 import Microstix from "microstix";
@@ -466,7 +465,7 @@ Microstix.exportModule("inputWidget", {
 ```
 
 **React компонент (App.tsx):**
-```typescript
+```tsx
 import './App.css';
 import type { PropsWithChildren, JSX } from "react";
 
@@ -477,7 +476,7 @@ export type AppProps = {
 
 function App({ title, message, children }: PropsWithChildren<AppProps>): JSX.Element {
   return (
-    <div className={`widget-container`}>
+    <div className={'widget-container'}>
       <header className="widget-header">
         <h1 className="widget-title">{title}</h1>
       </header>
