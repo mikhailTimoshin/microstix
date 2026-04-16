@@ -19,7 +19,7 @@ export type RegistryExporter = {
     resolve: (data: RegistryProps | undefined) => void
   ) => void;
   importModuleAsync: (name: string, src: string) => Promise<RegistryProps | undefined>
-  exportModule: (name: string, props: RegistryProps) => void;
+  exportModule: (props: RegistryProps) => void;
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
   useSharedLib: <T = unknown>(name: string) => T | undefined;
   registerStylesheet: (cfg: RegisterStylesheetProps) => void

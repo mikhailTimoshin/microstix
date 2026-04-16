@@ -127,7 +127,7 @@ export function importModule(
   resolve: (data: RegistryProps | undefined) => void
 ): void {
   const cb = () => {
-    resolve && typeof resolve === 'function' && resolve(__$registry.get(name));
+    resolve(__$registry.get(name));
   };
   index(src, name).finally(cb);
 }
@@ -138,9 +138,9 @@ export function importModuleAsync(name: string, src: string): Promise<RegistryPr
   });
 }
 
-export function exportModule(name: string, props: RegistryProps): void {
-  if (__$registry.has(name)) return;
-  __$registry.set(name, props);
+export function exportModule(props: RegistryProps): void {
+  if (__$registry.has(props.name)) return;
+  __$registry.set(props.name, props);
 }
 
 export function registerStylesheet({name, rel, obj}: RegisterStylesheetProps): void {
