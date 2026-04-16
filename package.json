@@ -1,6 +1,6 @@
 {
   "name": "microstix",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "TypeScript библиотека для микрофронтендов с минимальной конфигурацией",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -21,7 +21,6 @@
       "import": "./dist/jsx-runtime.mjs",
       "require": "./dist/jsx-runtime.cjs"
     }
-
   },
   "files": [
     "dist",
