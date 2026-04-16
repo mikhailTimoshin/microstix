@@ -143,11 +143,6 @@ export function exportModule(name: string, props: RegistryProps): void {
   __$registry.set(name, props);
 }
 
-export function registerImport(name: string, data: unknown): void {
-  window[name] = data;
-  registerSharedLib(name, data);
-}
-
 export function registerStylesheet({name, rel, obj}: RegisterStylesheetProps): void {
   const id = `rel-${name}-${obj}`
   const target = document.getElementById(id)
@@ -167,7 +162,6 @@ const exporter: RegistryExporter = {
   registerSharedLib,
   useSharedLib,
   createStore,
-  registerImport,
   registerStylesheet,
 };
 

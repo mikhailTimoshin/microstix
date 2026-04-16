@@ -22,7 +22,6 @@ export type RegistryExporter = {
   exportModule: (name: string, props: RegistryProps) => void;
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
   useSharedLib: <T = unknown>(name: string) => T | undefined;
-  registerImport: (name: string, data: unknown) => void
   registerStylesheet: (cfg: RegisterStylesheetProps) => void
   createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
 };
