@@ -143,6 +143,11 @@ export function exportModule(name: string, props: RegistryProps): void {
   __$registry.set(name, props);
 }
 
+export function registerImport(name: string, data: unknown): void {
+  window[name] = data;
+  registerSharedLib(name, data);
+}
+
 const exporter: RegistryExporter = {
   importModule,
   importModuleAsync,
@@ -150,6 +155,7 @@ const exporter: RegistryExporter = {
   registerSharedLib,
   useSharedLib,
   createStore,
+  registerImport,
 };
 
 if (!window['Microstix']) {
