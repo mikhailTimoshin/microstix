@@ -2,6 +2,7 @@ import type { Plugin } from 'vite';
 import type { UserConfig } from 'vite';
 
 export interface MicrostixViteConfig {
+  isHost?: boolean;
   /**
    * Имя проекта/микрофронтенда
    */
@@ -46,6 +47,8 @@ export interface MicrostixViteConfig {
    * Дополнительные настройки Vite
    */
   viteOptions?: Record<string, any>;
+
+  optimize?: string[];
 }
 
 function createSharedLibs(libs: Record<string, string>) {
@@ -63,6 +66,7 @@ function createSharedLibs(libs: Record<string, string>) {
  */
 function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig> {
   const {
+    isHost = false,
     name,
     component = 'src/index.jsx',
     formats = ['es', 'cjs'],
@@ -71,10 +75,11 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
       "react-dom": "ReactDOM"
     },
     port = 3001,
-    basePath = `/${name}/`,
+    basePath = isHost ? '/' : `/${name}/`,
     sourcemap = true,
     minify = true,
     viteOptions = {},
+    optimize = [],
   } = config;
 
   const external = createSharedLibs(config.sharedLibs || {})
@@ -85,6 +90,9 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
 
   return {
     base: basePath,
+    define: {
+      'process.env.NODE_ENV': JSON.stringify('production'),
+    },
     build: {
       lib: {
         entry: entryPoints,
@@ -107,6 +115,9 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
       port,
       cors: true,
     },
+    optimizeDeps: {
+      include: optimize,
+    },
     ...viteOptions,
   };
 }
@@ -124,24 +135,6 @@ export function microstixVitePlugin(config: MicrostixViteConfig): Plugin {
   return plugin;
 }
 
-export function microstixHtmlPlugin(isProd: boolean): Plugin {
-  const plugin: Plugin = {
-    name: 'microstix-html-plugin',
-    transformIndexHtml(html) {
-      if (!isProd) return html;
-      return html.replace(
-        '<head>',
-        `<head>
-          <script>
-          window.process = {env: {NODE_ENV: 'production'}}
-          </script>
-        `.trim()
-      );
-    },
-  };
-  return plugin;
-}
-
 export function getReactProd(isProd: boolean) {
   if (!isProd) {return {}}
   return { jsxImportSource: 'microstix' }
@@ -152,7 +145,6 @@ export function getReactProd(isProd: boolean) {
  */
 export const vitePlugin = {
   microstixVitePlugin,
-  microstixHtmlPlugin,
   getReactProd,
 };
 
