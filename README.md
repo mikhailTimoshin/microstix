@@ -3,7 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.16.0-blue.svg)](https://www.npmjs.com/package/microstix)
+[![Version](https://img.shields.io/badge/version-1.20.0-blue.svg)](https://www.npmjs.com/package/microstix)
 [![Vite](https://img.shields.io/badge/Vite-5.0+-blue.svg)](https://vitejs.dev/)
 
 **Microstix** — современная TypeScript библиотека для управления микрофронтендами с минимальной конфигурацией. Простая, легковесная и эффективная система для загрузки, регистрации и интеграции микрофронтендов в веб-приложениях. Идеально подходит для постепенной миграции монолитов, создания платформ приложений и реализации архитектуры микрофронтендов.
@@ -14,12 +14,13 @@
 - **Нулевые зависимости** — работает без внешних библиотек
 - **TypeScript first** — полная типобезопасность из коробки
 - **Автоматическая дедупликация** — скрипты загружаются только один раз
-- **Поддержка Web Components** — встроенный компонент `<app-component>` для декларативной загрузки
+- **Поддержка Web Components** — встроенный компонент `<app-component>` с Shadow DOM для декларативной загрузки
 - **Глобальный реестр** — централизованное управление микрофронтендами
 - **Vite плагин** — официальный плагин для упрощения конфигурации сборки
-- **JSX Runtime** — поддержка React JSX в production сборках
+- **JSX Runtime** — поддержка React JSX в production сборках для оптимизации бандла
 - **Общие библиотеки** — возможность шаринга зависимостей между микрофронтендами
-- **Глобальное состояние** — встроенная система управления состоянием
+- **Глобальное состояние** — встроенная система управления состоянием через Proxy
+- **Динамическая загрузка CSS** — изолированная загрузка стилей для каждого микрофронтенда
 - **Production-ready** — готово к использованию в production среде
 - **Легкая миграция** — постепенная миграция существующих приложений
 
@@ -40,19 +41,20 @@ npm install microstix
 ### 1. В хостовом приложении (host-app)
 
 ```typescript
-import Microstix from 'microstix';
-
-// Регистрация общих библиотек (React, ReactDOM и т.д.)
 import React from 'react';
 import ReactDOM from 'react-dom';
 import ReactJsx from 'react/jsx-runtime';
+import { registerSharedLib } from 'microstix';
 
-Microstix.registerSharedLib('React', React, true);
-Microstix.registerSharedLib('ReactDOM', ReactDOM, true);
-Microstix.registerSharedLib('ReactJsx', ReactJsx, true);
+// Регистрация общих библиотек (React, ReactDOM и т.д.)
+registerSharedLib('React', React, true);
+registerSharedLib('ReactDOM', ReactDOM, true);
+registerSharedLib('ReactJsx', ReactJsx, true);
 
 // Загрузка микрофронтенда
-Microstix.importModule('smartSearch', 'http://localhost:3001/smartSearch/src/index.js', (widgetData) => {
+import { importModule } from 'microstix';
+
+importModule('smartSearch', 'http://localhost:3001/smartSearch/src/index.js', (widgetData) => {
   console.log('Микрофронтенд загружен:', widgetData);
 });
 ```
@@ -60,12 +62,12 @@ Microstix.importModule('smartSearch', 'http://localhost:3001/smartSearch/src/ind
 ### 2. В микрофронтенде (remote-app)
 
 ```typescript
-// src/index.tsx - точка входа для Microstix
+// src/index.tsx — точка входа для Microstix
 import App from "./components/App/App.tsx";
-import Microstix from "microstix";
+import { exportModule } from "microstix";
 
 // Регистрация компонента в глобальном реестре
-Microstix.exportModule("smartSearch", {
+exportModule({
   name: "smartSearch",
   version: "0.1.0",
   App, // React компонент для рендеринга
@@ -78,38 +80,22 @@ Microstix.exportModule("smartSearch", {
 });
 ```
 
-```typescript
-import Microstix from 'microstix';
-import App from './components/App';
-
-// Регистрация микрофронтенда
-Microstix.exportModule('smartSearch', {
-  name: 'smartSearch',
-  version: '0.1.0',
-  App, // Экспорт React компонента
-});
-```
-
 ### 3. Использование React компонента в хосте
 
 ```tsx
 import { useState, useEffect } from 'react';
-import Microstix from 'microstix';
+import { importModule, useSharedLib, registerStylesheet, registerSharedLib } from 'microstix';
 
 function Component({ cfg, ...props }) {
   const [loaded, setLoaded] = useState(false);
-  const Cmp = Microstix.useSharedLib<Record<string, unknown>>(cfg.name)?.[cfg.obj];
+  const Cmp = useSharedLib<Record<string, unknown>>(cfg.name)?.[cfg.obj];
 
   useEffect(() => {
-    Microstix.importModule(
-      cfg.name,
-      cfg.src,
-      (result) => {
-        Microstix.registerStylesheet(cfg);
-        Microstix.registerSharedLib(cfg.name, result);
-        setLoaded(true);
-      },
-    );
+    importModule(cfg.name, cfg.src, (result) => {
+      registerStylesheet(cfg);
+      registerSharedLib(cfg.name, result);
+      setLoaded(true);
+    });
   }, [cfg]);
 
   return loaded && <Cmp {...props} />;
@@ -129,51 +115,45 @@ const cfg = {
 ### 4. Использование Web Component
 
 ```html
-<!-- Декларативная загрузка через кастомный элемент -->
-<app-component 
-  name="smartSearch" 
-  src="http://localhost:3001/smartSearch/src/index.js"
-  styles="http://localhost:3001/smartSearch/src/index.css">
-</app-component>
-
-<!-- С контекстом данных -->
-<app-component 
-  name="smartSearch" 
-  src="/static/smartSearch/bundle.js"
-  data-config='{"theme": "dark", "locale": "ru"}'>
-</app-component>
-```
-
-```html
+<!-- Декларативная загрузка через кастомный элемент с Shadow DOM -->
 <app-component 
   name="smartSearch" 
   src="http://localhost:3001/smartSearch/src/index.js"
   styles="http://localhost:3001/smartSearch/src/index.css">
 </app-component>
 ```
+
+Атрибуты:
+- `name` — имя микрофронтенда (обязательный)
+- `src` — URL JavaScript файла (обязательный)
+- `styles` — URL CSS файла (опционально, загружается через CSSStyleSheet в Shadow DOM)
 
 ## 📖 API Reference
 
 ### Основные функции
 
-#### `Microstix.importModule(name: string, src: string, callback: (data: RegistryProps | undefined) => void): void`
+#### `importModule(name: string, src: string, callback: (data: RegistryProps | undefined) => void): void`
 
 Загружает микрофронтенд по указанному URL и вызывает callback с данными модуля.
 
 ```typescript
-Microstix.importModule('smartSearch', '/static/smartSearch/bundle.js', (result) => {
+import { importModule } from 'microstix';
+
+importModule('smartSearch', '/static/smartSearch/bundle.js', (result) => {
   if (result) {
     console.log('Модуль загружен:', result.name, result.version);
   }
 });
 ```
 
-#### `Microstix.exportModule(name: string, props: RegistryProps): void`
+#### `exportModule(props: RegistryProps): void`
 
-Регистрирует микрофронтенд в глобальном реестре.
+Регистрирует микрофронтенд в глобальном реестре. Принимает единый объект конфигурации.
 
 ```typescript
-Microstix.exportModule('smartSearch', {
+import { exportModule } from 'microstix';
+
+exportModule({
   name: 'smartSearch',
   version: '0.1.0',
   App: MyComponent, // React компонент
@@ -185,34 +165,39 @@ Microstix.exportModule('smartSearch', {
 });
 ```
 
-#### `Microstix.registerSharedLib(name: string, lib: unknown, global?: boolean): void`
+#### `registerSharedLib(name: string, lib: unknown, global?: boolean): void`
 
-Регистрирует общую библиотеку для использования в микрофронтендах.
+Регистрирует общую библиотеку для использования в микрофронтендах. Если `global = true`, библиотека также записывается в `window[name]`.
 
 ```typescript
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { registerSharedLib } from 'microstix';
 
-Microstix.registerSharedLib('React', React, true);
-Microstix.registerSharedLib('ReactDOM', ReactDOM, true);
+registerSharedLib('React', React, true);
+registerSharedLib('ReactDOM', ReactDOM, true);
 ```
 
-#### `Microstix.useSharedLib<T = unknown>(name: string): T | undefined`
+#### `useSharedLib<T = unknown>(name: string): T | undefined`
 
 Получает зарегистрированную общую библиотеку по имени.
 
 ```typescript
-const React = Microstix.useSharedLib('React');
-const Component = Microstix.useSharedLib('smartSearch')?.['App'];
+import { useSharedLib } from 'microstix';
+
+const React = useSharedLib('React');
+const Component = useSharedLib('smartSearch')?.['App'];
 ```
 
-#### `Microstix.importModuleAsync(name: string, src: string): Promise<RegistryProps | undefined>`
+#### `importModuleAsync(name: string, src: string): Promise<RegistryProps | undefined>`
 
 Асинхронная версия `importModule`.
 
 ```typescript
+import { importModuleAsync } from 'microstix';
+
 async function loadWidget() {
-  const widgetData = await Microstix.importModuleAsync(
+  const widgetData = await importModuleAsync(
     'smartSearch',
     '/static/smartSearch/bundle.js'
   );
@@ -222,12 +207,14 @@ async function loadWidget() {
 }
 ```
 
-#### `Microstix.createStore<T extends Record<string, any>>(initial: T): T & {subscribe: (fn: (state: T) => void) => () => boolean}`
+#### `createStore<T extends Record<string, any>>(initial: T): T & { subscribe: (fn: (state: T) => void) => () => boolean }`
 
-Создает реактивное хранилище состояния.
+Создает реактивное хранилище состояния на основе Proxy. При изменении свойств уведомляет всех подписчиков.
 
 ```typescript
-const store = Microstix.createStore({
+import { createStore } from 'microstix';
+
+const store = createStore({
   count: 0,
   user: null,
 });
@@ -237,7 +224,7 @@ const unsubscribe = store.subscribe((state) => {
   console.log('State changed:', state);
 });
 
-// Изменение состояния
+// Изменение состояния (триггерит уведомления)
 store.count = 1;
 store.user = { name: 'John' };
 
@@ -245,12 +232,14 @@ store.user = { name: 'John' };
 unsubscribe();
 ```
 
-#### `Microstix.registerStylesheet({name, rel, obj}: RegisterStylesheetProps): void`
+#### `registerStylesheet({ name, rel, obj }: RegisterStylesheetProps): void`
 
-Динамически загружает CSS стили для микрофронтенда.
+Динамически загружает CSS стили для микрофронтенда. Добавляет `<link rel="stylesheet">` в `document.head` с атрибутом `crossorigin`.
 
 ```typescript
-Microstix.registerStylesheet({
+import { registerStylesheet } from 'microstix';
+
+registerStylesheet({
   name: 'smartSearch',
   rel: '/static/smartSearch/styles.css',
   obj: 'styles'
@@ -279,15 +268,18 @@ export type RegisterStylesheetProps = {
 
 // Конфигурация плагина Vite
 export interface MicrostixViteConfig {
-  name: string;
-  component?: string;
-  formats?: ('umd' | 'es' | 'cjs')[];
-  sharedLibs?: Record<string, string>;
-  port?: number;
-  basePath?: string;
-  sourcemap?: boolean;
-  minify?: boolean;
-  viteOptions?: Record<string, any>;
+  isHost?: boolean;                 // Является ли приложение хостом
+  name: string;                     // Имя проекта/микрофронтенда
+  component?: string;               // Путь к точке входа (по умолчанию: 'src/index.jsx')
+  formats?: ('umd' | 'es' | 'cjs')[];  // Форматы сборки (по умолчанию: ['es', 'cjs'])
+  sharedLibs?: Record<string, string>;  // Внешние зависимости
+  port?: number;                    // Порт для dev сервера (по умолчанию: 3001)
+  basePath?: string;                // Базовый путь (авто: '/' для хоста, `/${name}/` для remote)
+  sourcemap?: boolean;              // Включить sourcemaps (по умолчанию: true)
+  minify?: boolean;                 // Минимизировать код (по умолчанию: true)
+  viteOptions?: Record<string, any>;  // Дополнительные настройки Vite
+  staticUrl?: string;              // URL для статических файлов (по умолчанию: "http://localhost:3000")
+  optimize?: string[];             // Массив модулей для optimizeDeps.include
 }
 
 // Глобальный API
@@ -303,7 +295,9 @@ export type RegistryExporter = {
   registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
   useSharedLib: <T = unknown>(name: string) => T | undefined;
   registerStylesheet: (cfg: RegisterStylesheetProps) => void;
-  createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
+  createStore: <T extends Record<string, any>>(initial: T) => T & {
+    subscribe: (fn: (state: T) => void) => () => boolean;
+  };
 };
 
 // Глобальное объявление для TypeScript
@@ -315,40 +309,9 @@ declare global {
 }
 ```
 
-```typescript
-export type RegistryBaseProps = {
-  name: string;
-  version: string;
-  mount?: (target: HTMLElement, context?: Record<string, unknown>) => (() => void) | undefined;
-};
-
-export type RegistryProps = RegistryBaseProps & Record<string, unknown>;
-
-export type RegisterStylesheetProps = {
-  name: string;
-  rel: string;
-  obj: string;
-};
-
-export type RegistryExporter = {
-  default?: RegistryExporter;
-  importModule: (
-    name: string,
-    src: string,
-    resolve: (data: RegistryProps | undefined) => void
-  ) => void;
-  importModuleAsync: (name: string, src: string) => Promise<RegistryProps | undefined>;
-  exportModule: (props: RegistryProps) => void;
-  registerSharedLib: (name: string, lib: unknown, global?: boolean) => void;
-  useSharedLib: <T = unknown>(name: string) => T | undefined;
-  registerStylesheet: (cfg: RegisterStylesheetProps) => void;
-  createStore: <T extends Record<string, any>>(initial: T) => T & {subscribe: (fn: (state: T) => void) => () => boolean};
-};
-```
-
 ### Web Component: `<app-component>`
 
-Встроенный Web Component для декларативной загрузки микрофронтендов.
+Встроенный Web Component для декларативной загрузки микрофронтендов. Использует **Shadow DOM** для изоляции стилей.
 
 ```html
 <app-component 
@@ -361,7 +324,7 @@ export type RegistryExporter = {
 Атрибуты:
 - `name` — имя микрофронтенда
 - `src` — URL JavaScript файла
-- `styles` — URL CSS файла (опционально)
+- `styles` — URL CSS файла (опционально, загружается через `CSSStyleSheet` в Shadow Root)
 
 ## 🏗️ Архитектура
 
@@ -369,16 +332,17 @@ export type RegistryExporter = {
 
 1. **Регистрация библиотек**: Хостовое приложение регистрирует общие зависимости (React, ReactDOM и т.д.)
 2. **Экспорт модулей**: Микрофронтенды регистрируют свои компоненты через `exportModule`
-3. **Импорт модулей**: Хостовое приложение загружает микрофронтенды через `importModule`
-4. **Шаринг зависимостей**: Общие библиотеки доступны всем микрофронтендам
-5. **Изоляция стилей**: CSS загружается динамически через `registerStylesheet`
+3. **Импорт модулей**: Хостовое приложение загружает микрофронтенды через `importModule` / `importModuleAsync`
+4. **Шаринг зависимостей**: Общие библиотеки доступны всем микрофронтендам через `useSharedLib`
+5. **Изоляция стилей**: CSS загружается динамически через `registerStylesheet` или через Shadow DOM в Web Component
+6. **Управление состоянием**: Глобальное реактивное состояние через `createStore` на основе Proxy
 
 ### Преимущества подхода
 
 - **Простота интеграции**: Минимальный API, понятный даже новичкам
 - **Производительность**: Дедупликация скриптов и ленивая загрузка
 - **Гибкость**: Поддержка как React компонентов, так и Web Components
-- **Безопасность**: Изоляция стилей и скриптов
+- **Безопасность**: Изоляция стилей и скриптов (Shadow DOM)
 - **TypeScript**: Полная поддержка типов из коробки
 - **Постепенная миграция**: Возможность постепенного перехода на микрофронтенды
 - **Независимые команды**: Каждая команда может разрабатывать и деплоить независимо
@@ -391,12 +355,6 @@ export type RegistryExporter = {
 4. **A/B тестирование**: Быстрое развертывание разных версий компонентов
 5. **Мультитенантность**: Разные интерфейсы для разных клиентов
 
-- **Простота интеграции**: Минимальный API, понятный даже новичкам
-- **Производительность**: Дедупликация скриптов и ленивая загрузка
-- **Гибкость**: Поддержка как React компонентов, так и Web Components
-- **Безопасность**: Изоляция стилей и скриптов
-- **TypeScript**: Полная поддержка типов из коробки
-
 ## 📁 Структура проекта
 
 ### Пример хостового приложения (host-app)
@@ -406,7 +364,7 @@ export type RegistryExporter = {
 {
   "name": "microstix-host-app",
   "dependencies": {
-    "microstix": "^1.16.0",
+    "microstix": "^1.20.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   }
@@ -416,13 +374,12 @@ export type RegistryExporter = {
 **vite.config.ts:**
 ```typescript
 import { defineConfig } from 'vite'
-import { microstixHtmlPlugin } from 'microstix/vite-plugin';
 import react from '@vitejs/plugin-react'
 
 const isDev = process.env.NODE_ENV === 'development'
 
 export default defineConfig({
-  plugins: [react(), microstixHtmlPlugin(!isDev)],
+  plugins: [react()],
   server: {
     port: 3000,
   },
@@ -452,7 +409,7 @@ createRoot(document.getElementById('root')!).render(<App />)
 **App.tsx:**
 ```typescript
 import Component from "./components/Component.tsx";
-import {useState} from "react";
+import { useState } from "react";
 
 const cfg = {
   name: "smartSearch",
@@ -481,7 +438,7 @@ function App() {
 {
   "name": "smart-search",
   "dependencies": {
-    "microstix": "^1.16.0",
+    "microstix": "^1.20.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   }
@@ -512,19 +469,19 @@ export default defineConfig({
 })
 ```
 
-**index.tsx:**
+**src/index.tsx:**
 ```typescript
 import App from "./components/App/App.tsx";
-import Microstix from "microstix";
+import { exportModule } from "microstix";
 
-Microstix.exportModule("smartSearch", {
+exportModule({
   name: "smartSearch",
   version: "0.1.0",
   App,
 });
 ```
 
-**App.tsx:**
+**components/App/App.tsx:**
 ```typescript
 import './App.css'
 
@@ -557,18 +514,12 @@ function App({ value, placeholder, onChange }) {
 
 #### Базовое использование
 
-**Для хостового приложения:**
-```typescript
-import { microstixHtmlPlugin } from 'microstix/vite-plugin';
+**Для микрофронтенда (remote-app):**
 
-export default defineConfig({
-  plugins: [microstixHtmlPlugin(!isDev)],
-});
-```
-
-**Для микрофронтенда:**
 ```typescript
+import { defineConfig } from 'vite'
 import { microstixVitePlugin, getReactProd } from 'microstix/vite-plugin';
+import react from '@vitejs/plugin-react'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -588,19 +539,41 @@ export default defineConfig({
 })
 ```
 
+#### Параметры `MicrostixViteConfig`
+
+| Параметр      | Тип                        | По умолчанию                        | Описание                                           |
+|---------------|----------------------------|--------------------------------------|----------------------------------------------------|
+| `isHost`      | `boolean`                  | `false`                              | Является ли приложение хостом                      |
+| `name`        | `string`                   | — (обязательный)                     | Имя проекта/микрофронтенда                         |
+| `component`   | `string`                   | `'src/index.jsx'`                    | Путь к точке входа                                 |
+| `formats`     | `('umd'\|'es'\|'cjs')[]`  | `['es', 'cjs']`                      | Форматы сборки                                     |
+| `sharedLibs`  | `Record<string, string>`   | `{ react: "React", react-dom: "ReactDOM" }` | Внешние зависимости и их глобальные имена |
+| `port`        | `number`                   | `3001`                               | Порт для dev сервера                               |
+| `basePath`    | `string`                   | `'/'` (хост) / `'/<name>/'` (remote) | Базовый путь для статических ресурсов              |
+| `sourcemap`   | `boolean`                  | `true`                               | Включить sourcemaps                                |
+| `minify`      | `boolean`                  | `true`                               | Минимизировать код (terser)                        |
+| `viteOptions` | `Record<string, any>`      | `{}`                                 | Дополнительные настройки Vite                      |
+| `staticUrl`   | `string`                   | `'http://localhost:3000'`            | URL для статических файлов (замена `@static-files`)|
+| `optimize`    | `string[]`                 | `[]`                                 | Модули для `optimizeDeps.include`                  |
+
+#### `getReactProd(isProd: boolean)`
+
+Утилита для настройки React JSX в production режиме. При `isProd = true` возвращает конфигурацию `{ jsxImportSource: 'microstix' }`, что позволяет использовать оптимизированный JSX runtime из Microstix.
+
 ### Преимущества плагина
 
 - **Автоматическая конфигурация**: Настройка Rollup для микрофронтендов
 - **Оптимизация сборки**: Правильная настройка external зависимостей
-- **Dev сервер**: Автоматический запуск dev сервера на отдельном порту
-- **JSX Runtime**: Поддержка React JSX в production
+- **Dev сервер**: Автоматический запуск dev сервера с CORS и прокси для статики
+- **JSX Runtime**: Поддержка React JSX в production через `getReactProd`
+- **Замена путей**: Автоматическая замена `@static-files` на указанный `staticUrl` в production
 
 ## 📊 Производительность и оптимизация
 
 ### Метрики производительности
 
 - **Размер библиотеки**: ~5KB (gzipped)
-- **Время загрузки**: < 1ms для инициализации
+- **Время инициализации**: < 1ms
 - **Потребление памяти**: Минимальное, только для реестра модулей
 - **Скорость регистрации**: O(1) для операций с Map
 - **Дедупликация скриптов**: Автоматическое предотвращение повторных загрузок
@@ -608,16 +581,17 @@ export default defineConfig({
 ### Оптимизации
 
 1. **Ленивая загрузка**: Модули загружаются только когда нужны
-2. **Кэширование в памяти**: Результаты загрузки кэшируются
+2. **Кэширование в памяти**: Результаты загрузки и скрипты кэшируются
 3. **Параллельная загрузка**: Возможность загрузки нескольких модулей одновременно
-4. **Предзагрузка**: Опциональная предзагрузка критических модулей
+4. **Дедупликация**: Каждый скрипт загружается только один раз
+5. **Минимальный размер**: Библиотека ~5KB в сжатом виде
 
 ### Бенчмарки
 
 ```typescript
 // Пример измерения времени загрузки
 console.time('microstix-load');
-Microstix.importModuleAsync('widget', '/widget.js')
+importModuleAsync('widget', '/widget.js')
   .then(() => {
     console.timeEnd('microstix-load'); // ~50-100ms в зависимости от сети
   });
@@ -631,16 +605,12 @@ Microstix.importModuleAsync('widget', '/widget.js')
 - Минимизируйте размер бандлов микрофронтендов
 - Используйте tree-shaking для удаления неиспользуемого кода
 
-- **Дедупликация скриптов**: Каждый скрипт загружается только один раз
-- **Ленивая загрузка**: Модули загружаются по требованию
-- **Кэширование**: Результаты загрузки кэшируются в памяти
-- **Минимальный размер**: Библиотека ~5KB в сжатом виде
-
 ## 🔒 Безопасность и лучшие практики
 
 ### Меры безопасности
 
 - **Изоляция скриптов**: Каждый микрофронтенд работает в своем контексте
+- **Shadow DOM**: Встроенный Web Component использует изолированное DOM-дерево
 - **Валидация источников**: Проверка URL перед загрузкой
 - **CORS поддержка**: Правильная настройка cross-origin запросов
 - **Content Security Policy**: Совместимость с современными политиками безопасности
@@ -685,11 +655,6 @@ document.head.appendChild(script);
 4. Протестируйте загрузку в разных браузерах
 5. Проверьте обработку ошибок загрузки
 
-- **Изоляция скриптов**: Каждый микрофронтенд работает в своем контексте
-- **Валидация источников**: Проверка URL перед загрузкой
-- **CORS поддержка**: Правильная настройка cross-origin запросов
-- **Content Security Policy**: Совместимость с современными политиками безопасности
-
 ## 🤝 Совместимость
 
 ### Браузеры
@@ -720,19 +685,19 @@ document.head.appendChild(script);
 A: Используйте `Promise.all` с `importModuleAsync`:
 ```typescript
 const [module1, module2] = await Promise.all([
-  Microstix.importModuleAsync('module1', '/module1.js'),
-  Microstix.importModuleAsync('module2', '/module2.js'),
+  importModuleAsync('module1', '/module1.js'),
+  importModuleAsync('module2', '/module2.js'),
 ]);
 ```
 
 **Q: Как обновить микрофронтенд без перезагрузки страницы?**
-A: Используйте версионирование в имени модуля:
+A: Используйте версионирование в имени модуля или добавьте query-параметр к URL:
 ```typescript
-Microstix.exportModule('my-widget-v2', { ... });
+importModule('my-widget', '/my-widget.js?v=2', callback);
 ```
 
 **Q: Как передать пропсы в микрофронтенд?**
-A: Пропсы передаются как обычные React пропсы:
+A: Пропсы передаются как обычные React пропсы в компонент-обёртку:
 ```typescript
 <Component 
   cfg={cfg}
@@ -747,7 +712,7 @@ A: Пропсы передаются как обычные React пропсы:
 A: Используйте try-catch с `importModuleAsync`:
 ```typescript
 try {
-  const module = await Microstix.importModuleAsync('widget', '/widget.js');
+  const module = await importModuleAsync('widget', '/widget.js');
   if (!module) {
     throw new Error('Модуль не зарегистрирован');
   }
@@ -764,7 +729,7 @@ A: Да, через Web Components или функцию `mount`:
 <app-component name="widget" src="/widget.js"></app-component>
 
 // Через функцию mount
-Microstix.importModule('widget', '/widget.js', (data) => {
+importModule('widget', '/widget.js', (data) => {
   if (data?.mount) {
     const unmount = data.mount(document.getElementById('target'));
     // Для очистки: unmount();
@@ -773,21 +738,10 @@ Microstix.importModule('widget', '/widget.js', (data) => {
 ```
 
 **Q: Как очистить кэш загруженных модулей?**
-A: Microstix автоматически дедуплицирует скрипты. Для принудительной перезагрузки:
-```typescript
-// Измените URL (добавьте query параметр)
-Microstix.importModule('widget', '/widget.js?v=2', callback);
-```
+A: Microstix автоматически дедуплицирует скрипты. Для принудительной перезагрузки измените URL (добавьте query параметр).
 
 **Q: Как работает шаринг зависимостей?**
-A: Библиотеки регистрируются один раз и доступны всем микрофронтендам:
-```typescript
-// В хостовом приложении
-Microstix.registerSharedLib('React', React, true);
-
-// В микрофронтенде (React автоматически доступен)
-const React = Microstix.useSharedLib('React');
-```
+A: Библиотеки регистрируются один раз через `registerSharedLib` и доступны всем микрофронтендам через `useSharedLib`.
 
 ### Сообщение об ошибках и отладка
 
@@ -818,17 +772,12 @@ const React = Microstix.useSharedLib('React');
 ```typescript
 // Включение детального логирования
 if (process.env.NODE_ENV === 'development') {
-  // Логирование всех операций Microstix
-  const originalImport = Microstix.importModule;
-  Microstix.importModule = function(name, src, callback) {
+  const originalImport = importModule;
+  importModule = function(name, src, callback) {
     console.log(`[Microstix] Загрузка модуля: ${name} из ${src}`);
     return originalImport.call(this, name, src, callback);
   };
 }
-
-// Проверка состояния реестра
-console.log('Зарегистрированные модули:', Microstix.__$registry?.size);
-console.log('Общие библиотеки:', Microstix.__$sharedLibs?.size);
 ```
 
 #### Мониторинг в production
@@ -876,24 +825,31 @@ npm run dev
 ```
 microstix/
 ├── src/
-│   ├── index.ts          # Основной код библиотеки
-│   ├── index.types.ts    # TypeScript типы
-│   ├── vite-plugin.ts    # Плагин для Vite
-│   └── jsx-runtime.ts    # JSX Runtime поддержка
-├── dist/                 # Собранные файлы
-├── package.json          # Конфигурация npm
-├── tsconfig.json         # Конфигурация TypeScript
-├── tsup.config.js        # Конфигурация сборки
-└── README.md            # Документация
+│   ├── index.ts            # Основной код библиотеки (class Component, createStore, registry API)
+│   ├── index.types.ts      # TypeScript типы (RegistryProps, RegistryExporter, etc.)
+│   ├── vite-plugin.ts      # Плагин для Vite (microstixVitePlugin, getReactProd)
+│   └── jsx-runtime.ts      # JSX Runtime для production (обёртка над window.ReactJsx)
+├── dist/                   # Собранные файлы (index, vite-plugin, jsx-runtime)
+├── package.json            # Конфигурация npm
+├── tsconfig.json           # Конфигурация TypeScript
+├── tsup.config.js          # Конфигурация сборки (3 отдельных entry point)
+└── README.md               # Документация
 ```
+
+### Сборка (tsup.config.js)
+
+Проект собирается в 3 отдельных entry point:
+
+1. **`src/index.ts`** — основная библиотека: `dist/index.js`, `dist/index.mjs`, `dist/index.global.js` + `.d.ts`
+2. **`src/vite-plugin.ts`** — плагин Vite: `dist/vite-plugin.mjs`, `dist/vite-plugin.cjs` + `.d.ts`
+3. **`src/jsx-runtime.ts`** — JSX runtime: `dist/jsx-runtime.mjs`, `dist/jsx-runtime.cjs`
 
 ### Тестирование и качество кода
 
 #### Unit тесты
 
 ```typescript
-// Пример теста для Microstix API
-import Microstix from 'microstix';
+import { registerSharedLib, useSharedLib, exportModule, importModuleAsync } from 'microstix';
 
 describe('Microstix', () => {
   beforeEach(() => {
@@ -903,9 +859,9 @@ describe('Microstix', () => {
 
   test('should register and retrieve shared library', () => {
     const mockLib = { version: '1.0.0' };
-    Microstix.registerSharedLib('test-lib', mockLib);
+    registerSharedLib('test-lib', mockLib);
     
-    const retrieved = Microstix.useSharedLib('test-lib');
+    const retrieved = useSharedLib('test-lib');
     expect(retrieved).toBe(mockLib);
   });
 
@@ -916,9 +872,9 @@ describe('Microstix', () => {
       App: () => null
     };
 
-    Microstix.exportModule(mockModule);
+    exportModule(mockModule);
     
-    const result = await Microstix.importModuleAsync('test-module', '');
+    const result = await importModuleAsync('test-module', '');
     expect(result).toEqual(mockModule);
   });
 });
@@ -927,25 +883,20 @@ describe('Microstix', () => {
 #### Интеграционные тесты
 
 ```typescript
-// Тестирование интеграции с React
 import { render, waitFor } from '@testing-library/react';
-import Microstix from 'microstix';
+import { exportModule } from 'microstix';
 
 test('should load and render microfrontend', async () => {
-  // Мок микрофронтенда
   const MockComponent = () => <div>Test Component</div>;
   
-  Microstix.exportModule('test-widget', {
+  exportModule({
     name: 'test-widget',
     version: '1.0.0',
     App: MockComponent
   });
 
   const { getByText } = render(
-    <MicrofrontendLoader 
-      name="test-widget" 
-      src="/test-widget.js" 
-    />
+    <MicrofrontendLoader name="test-widget" src="/test-widget.js" />
   );
 
   await waitFor(() => {
@@ -957,29 +908,22 @@ test('should load and render microfrontend', async () => {
 #### E2E тесты
 
 ```typescript
-// Пример E2E теста с Playwright
 import { test, expect } from '@playwright/test';
 
 test('should load microfrontend in host application', async ({ page }) => {
   await page.goto('http://localhost:3000');
   
-  // Проверка загрузки микрофронтенда
   await expect(page.locator('app-component')).toBeVisible();
-  
-  // Взаимодействие с микрофронтендом
-  await page.fill('input[placeholder="Поиск"]', 'test query');
-  await expect(page.locator('.search-results')).toContainText('test query');
 });
 ```
 
 #### Тестирование производительности
 
 ```typescript
-// Бенчмарк тесты
 describe('Performance benchmarks', () => {
   test('should load module under 100ms', async () => {
     const start = performance.now();
-    await Microstix.importModuleAsync('fast-module', '/fast.js');
+    await importModuleAsync('fast-module', '/fast.js');
     const duration = performance.now() - start;
     
     expect(duration).toBeLessThan(100);
@@ -987,7 +931,7 @@ describe('Performance benchmarks', () => {
 
   test('should handle 100 concurrent module loads', async () => {
     const promises = Array.from({ length: 100 }, (_, i) =>
-      Microstix.importModuleAsync(`module-${i}`, `/module-${i}.js`)
+      importModuleAsync(`module-${i}`, `/module-${i}.js`)
     );
     
     await expect(Promise.all(promises)).resolves.not.toThrow();
@@ -998,7 +942,6 @@ describe('Performance benchmarks', () => {
 #### Линтинг и проверка кода
 
 ```json
-// .eslintrc.json
 {
   "extends": [
     "eslint:recommended",
@@ -1014,7 +957,6 @@ describe('Performance benchmarks', () => {
 #### CI/CD конфигурация
 
 ```yaml
-# .github/workflows/ci.yml
 name: CI
 on: [push, pull_request]
 jobs:
@@ -1037,7 +979,7 @@ jobs:
 <html>
 <head>
     <title>Microstix Test</title>
-    <script src="./dist/index.js"></script>
+    <script src="./dist/index.global.js"></script>
 </head>
 <body>
     <div id="app">
@@ -1053,7 +995,7 @@ jobs:
             console.log('Microstix загружен:', window.Microstix);
             
             // Тест регистрации модуля
-            window.Microstix.exportModule('test-module', {
+            window.Microstix.exportModule({
                 name: 'test-module',
                 version: '1.0.0',
                 App: () => document.createElement('div')
@@ -1069,19 +1011,6 @@ jobs:
 </html>
 ```
 
-## 📄 Лицензия
-
-MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подробностей.
-
-## 👥 Команда
-
-- **Архитектор**: Leto
-- **Версия**: 1.16.0
-
----
-
-**Microstix** — делаем микрофронтенды простыми. Минимальная конфигурация, максимальная эффективность. 🚀
-
 ## 🚀 Дорожная карта
 
 ### Планируемые возможности
@@ -1095,24 +1024,28 @@ MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подр
 - [ ] **Аналитика** — встроенная аналитика использования микрофронтендов
 - [ ] **Темы и скины** — система тем для кастомизации микрофронтендов
 
-### Текущие возможности в версии 1.16.0:
+### Текущие возможности в версии 1.20.0:
 
 - ✅ **Динамическая загрузка CSS** — функция `registerStylesheet` для изоляции стилей
-- ✅ **Vite плагин** — официальная интеграция с Vite и поддержка JSX Runtime
+- ✅ **Vite плагин** — официальная интеграция с Vite (`microstixVitePlugin`, `getReactProd`)
 - ✅ **TypeScript типизация** — полная поддержка TypeScript из коробки
 - ✅ **Оптимизация производительности** — дедупликация и кэширование скриптов
 - ✅ **Примеры интеграции** — готовые примеры с React и Web Components
 - ✅ **Документация** — подробная документация на русском языке
-- ✅ **Глобальное состояние** — система управления состоянием через `createStore`
-- ✅ **Web Components** — поддержка кастомных элементов через `<app-component>`
+- ✅ **Глобальное состояние** — система управления состоянием через `createStore` (Proxy-based)
+- ✅ **Web Components** — поддержка кастомных элементов `<app-component>` с Shadow DOM
 - ✅ **Шаринг зависимостей** — система общих библиотек для микрофронтендов
 - ✅ **Безопасность** — поддержка CSP, CORS и проверка источников
+- ✅ **JSX Runtime** — оптимизированный JSX runtime для production сборок
+- ✅ **Изоляция стилей** — Shadow DOM для Web Component, CSSStyleSheet API
 
 ## 🌟 Примеры использования в реальных проектах
 
 ### 1. E-commerce платформа
 
 ```typescript
+import { importModuleAsync } from 'microstix';
+
 // Загрузка различных виджетов для интернет-магазина
 const ecommerceWidgets = [
   { name: 'product-card', src: '/widgets/product-card.js' },
@@ -1124,7 +1057,7 @@ const ecommerceWidgets = [
 // Параллельная загрузка всех виджетов
 await Promise.all(
   ecommerceWidgets.map(widget =>
-    Microstix.importModuleAsync(widget.name, widget.src)
+    importModuleAsync(widget.name, widget.src)
   )
 );
 ```
@@ -1132,8 +1065,10 @@ await Promise.all(
 ### 2. Административная панель
 
 ```typescript
+import { importModuleAsync } from 'microstix';
+
 // Динамическая загрузка модулей админки
-const adminModules = {
+const adminModules: Record<string, string> = {
   dashboard: '/admin/dashboard.js',
   users: '/admin/users.js',
   analytics: '/admin/analytics.js',
@@ -1142,7 +1077,7 @@ const adminModules = {
 
 // Ленивая загрузка по требованию
 function loadAdminModule(moduleName: string) {
-  return Microstix.importModuleAsync(
+  return importModuleAsync(
     `admin-${moduleName}`,
     adminModules[moduleName]
   );
@@ -1152,11 +1087,13 @@ function loadAdminModule(moduleName: string) {
 ### 3. Платформа для создания сайтов
 
 ```typescript
+import { importModule } from 'microstix';
+
 // Загрузка пользовательских виджетов
 const userWidgets = await fetchUserWidgets();
 
 userWidgets.forEach(widget => {
-  Microstix.importModule(widget.id, widget.url, (module) => {
+  importModule(widget.id, widget.url, (module) => {
     if (module?.mount) {
       // Добавление виджета на страницу
       const container = document.createElement('div');
@@ -1225,7 +1162,7 @@ userWidgets.forEach(widget => {
 
 ## 📄 Лицензия
 
-MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подробностей.
+MIT License © 2025 Microstix. См. файл [LICENSE](LICENSE) для подробностей.
 
 ### Разрешения
 
@@ -1262,10 +1199,9 @@ MIT License © 2026 Microstix. См. файл [LICENSE](LICENSE) для подр
 
 ## 📞 Контакты
 
-- **Email**: support@microstix.dev
+- **Email**: m.timoshin88@gmail.com
 - **GitHub Issues**: [github.com/mikhailTimoshin/microstix/issues](https://github.com/mikhailTimoshin/microstix/issues)
-- **Документация**: [microstix.dev/docs](https://microstix.dev/docs)
-- **Блог**: [microstix.dev/blog](https://microstix.dev/blog)
+- **Документация**: [github.com/mikhailTimoshin/microstix/README.md](https://github.com/mikhailTimoshin/microstix/README.md)
 
 ---
 
