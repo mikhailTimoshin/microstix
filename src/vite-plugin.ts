@@ -2,6 +2,9 @@ import type { Plugin } from 'vite';
 import type { UserConfig } from 'vite';
 
 export interface MicrostixViteConfig {
+  /**
+   * Хост апп
+   */
   isHost?: boolean;
   /**
    * Имя проекта/микрофронтенда
@@ -48,6 +51,8 @@ export interface MicrostixViteConfig {
    */
   viteOptions?: Record<string, any>;
 
+  staticUrl?: string;
+
   optimize?: string[];
 }
 
@@ -79,6 +84,7 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
     sourcemap = true,
     minify = true,
     viteOptions = {},
+    staticUrl = "http://localhost:3000",
     optimize = [],
   } = config;
 
@@ -114,6 +120,14 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
     server: {
       port,
       cors: true,
+      proxy: {
+        [`/@static-files/`]: {
+          target: staticUrl,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/@static-files/, ''),
+        }
+      }
     },
     optimizeDeps: {
       include: optimize,
@@ -130,8 +144,26 @@ export function microstixVitePlugin(config: MicrostixViteConfig): Plugin {
   const plugin: Plugin = {
     name: 'microstix-vite-plugin',
     config: () => createMicrostixConfig(config),
-  };
+    transform(code, id) {
+      if (!id.endsWith('.js') && !id.endsWith('.ts') && !id.endsWith('.tsx') && !id.endsWith('.jsx')) {
+        return null;
+      }
 
+      if (!( process.env.NODE_ENV === 'production')) {
+        return null
+      }
+
+      const newCode = code.replace(/@static-files/g, config.staticUrl!);
+
+      if (newCode !== code) {
+        return {
+          code: newCode,
+          map: null,
+        };
+      }
+      return null;
+    },
+  };
   return plugin;
 }
 
