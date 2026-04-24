@@ -6,6 +6,7 @@ export interface MicrostixViteConfig {
    * Хост апп
    */
   isHost?: boolean;
+
   /**
    * Имя проекта/микрофронтенда
    */
@@ -14,7 +15,7 @@ export interface MicrostixViteConfig {
   /**
    * Путь к точке входа (по умолчанию: 'src/index.jsx')
    */
-  component?: string;
+  component?: string | Record<string, string>;
 
   /**
    * Форматы сборки (по умолчанию: ['umd'])
@@ -51,8 +52,14 @@ export interface MicrostixViteConfig {
    */
   viteOptions?: Record<string, any>;
 
+  /**
+   * Путь до сервера статики
+   */
   staticUrl?: string;
 
+  /**
+   * Зависимости требующие включение для оптимизации
+   */
   optimize?: string[];
 }
 
@@ -64,6 +71,13 @@ function createSharedLibs(libs: Record<string, string>) {
     })
   }
   return result;
+}
+
+function createEntryPoints(entryPoints: string | Record<string, string>) {
+  if (typeof entryPoints === 'string') {
+    return { index: entryPoints };
+  }
+  return entryPoints;
 }
 
 /**
@@ -89,10 +103,7 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
   } = config;
 
   const external = createSharedLibs(config.sharedLibs || {})
-
-  const entryPoints: Record<string, string> = {
-    index: component,
-  };
+  const entry = createEntryPoints(component)
 
   return {
     base: basePath,
@@ -101,7 +112,7 @@ function createMicrostixConfig(config: MicrostixViteConfig): Partial<UserConfig>
     },
     build: {
       lib: {
-        entry: entryPoints,
+        entry,
         name,
         formats,
       },
@@ -145,11 +156,11 @@ export function microstixVitePlugin(config: MicrostixViteConfig): Plugin {
     name: 'microstix-vite-plugin',
     config: () => createMicrostixConfig(config),
     transform(code, id) {
-      if (!id.endsWith('.js') && !id.endsWith('.ts') && !id.endsWith('.tsx') && !id.endsWith('.jsx')) {
+      if (!id.endsWith('.js') && !id.endsWith('.ts') && !id.endsWith('.tsx') && !id.endsWith('.jsx') && !id.endsWith('.css')) {
         return null;
       }
 
-      if (!( process.env.NODE_ENV === 'production')) {
+      if (!(process.env.NODE_ENV === 'production')) {
         return null
       }
 

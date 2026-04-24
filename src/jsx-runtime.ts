@@ -1,5 +1,5 @@
-const racttJsx = window['ReactJsx'];
+const reactJsx = window['ReactJsx'];
 // @ts-ignore
-export const jsx = racttJsx.jsx;
+export const jsx = reactJsx.jsx;
 // @ts-ignore
-export const jsxs = racttJsx.jsxs;
+export const jsxs = reactJsx.jsxs;
